@@ -1,17 +1,16 @@
 
-import { Sidebar } from "../components/layout/Sidebar";
 import { Header } from "../components/layout/Header";
 import { WeatherCard } from "../components/dashboard/WeatherCard";
 import { DeviceOverview } from "../components/dashboard/DeviceOverview";
 import { useState } from "react";
 
 const Index = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-100 via-blue-50 to-orange-50">
-      <Sidebar isOpen={isSidebarOpen} onOpenChange={setIsSidebarOpen} />
-      <main className={`transition-all duration-300 ${isSidebarOpen ? 'pl-64' : 'pl-20'} pt-16 p-6`}>
+      <Header isMenuOpen={isMenuOpen} onMenuOpenChange={setIsMenuOpen} />
+      <main className="pt-16 p-6">
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="py-12">
             <h1 className="text-4xl font-bold text-blue-900">
