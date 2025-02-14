@@ -1,10 +1,10 @@
 
-import { Home, Settings, Plant, BarChart3, Users, ShoppingBag, BookOpen, MessageSquare } from "lucide-react";
+import { Home, Settings, Sprout, BarChart3, Users, ShoppingBag, BookOpen, MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const menuItems = [
   { icon: Home, label: "대시보드", path: "/" },
-  { icon: Plant, label: "디바이스 관리", path: "/devices" },
+  { icon: Sprout, label: "디바이스 관리", path: "/devices" },
   { icon: BarChart3, label: "데이터 분석", path: "/analytics" },
   { icon: Users, label: "커뮤니티", path: "/community" },
   { icon: BookOpen, label: "교육 자료", path: "/education" },
