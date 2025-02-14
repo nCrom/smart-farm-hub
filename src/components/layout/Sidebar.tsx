@@ -1,5 +1,5 @@
 
-import { Home, Settings, Sprout, BarChart3, Users, ShoppingBag, BookOpen, MessageSquare } from "lucide-react";
+import { Home, Settings, Sprout, BarChart3, Users, ShoppingBag, BookOpen, MessageSquare, ChevronRight, ChevronLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const menuItems = [
@@ -13,21 +13,36 @@ const menuItems = [
   { icon: Settings, label: "설정", path: "/settings" },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+}
+
+export function Sidebar({ isOpen, onOpenChange }: SidebarProps) {
   return (
-    <nav className="w-64 bg-white/80 backdrop-blur-sm border-r border-gray-200 h-screen fixed left-0 top-0 overflow-y-auto animate-fadeIn">
-      <div className="p-6">
-        <h1 className="text-2xl font-bold text-primary-600">스마트팜 허브</h1>
+    <nav className={`bg-white/80 backdrop-blur-sm border-r border-gray-200 h-screen fixed left-0 top-0 overflow-y-auto animate-fadeIn transition-all duration-300 ${isOpen ? 'w-64' : 'w-20'}`}>
+      <div className={`p-6 flex items-center justify-between ${isOpen ? '' : 'justify-center'}`}>
+        {isOpen && <h1 className="text-2xl font-bold text-primary-600">스마트팜 허브</h1>}
+        <button
+          onClick={() => onOpenChange(!isOpen)}
+          className="p-2 hover:bg-primary-50 rounded-lg transition-colors"
+        >
+          {isOpen ? (
+            <ChevronLeft className="w-5 h-5 text-gray-600" />
+          ) : (
+            <ChevronRight className="w-5 h-5 text-gray-600" />
+          )}
+        </button>
       </div>
       <div className="px-4">
         {menuItems.map((item) => (
           <Link
             key={item.path}
             to={item.path}
-            className="flex items-center gap-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-primary-50 hover:text-primary-600 transition-all"
+            className={`flex items-center gap-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-primary-50 hover:text-primary-600 transition-all ${isOpen ? '' : 'justify-center'}`}
           >
             <item.icon className="w-5 h-5" />
-            <span className="font-medium">{item.label}</span>
+            {isOpen && <span className="font-medium">{item.label}</span>}
           </Link>
         ))}
       </div>
