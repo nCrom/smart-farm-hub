@@ -71,14 +71,14 @@ const Index = () => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors !bg-transparent !border-none !shadow-none !p-0 !m-0 scale-[2.5]">
-                <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" strokeWidth="5.5" fill="none">
-                  <path d="M 15 4 L 7 12 L 15 20" strokeLinecap="round" strokeLinejoin="round" />
+              <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors !bg-transparent !border-none !shadow-none !p-0 !m-0 scale-[2]">
+                <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" strokeWidth="3" fill="none">
+                  <path d="M 14 6 C 14 6, 10 12, 10 12 C 10 12, 14 18, 14 18" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </CarouselPrevious>
-              <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors !bg-transparent !border-none !shadow-none !p-0 !m-0 scale-[2.5]">
-                <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" strokeWidth="5.5" fill="none">
-                  <path d="M 9 4 L 17 12 L 9 20" strokeLinecap="round" strokeLinejoin="round" />
+              <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors !bg-transparent !border-none !shadow-none !p-0 !m-0 scale-[2]">
+                <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" strokeWidth="3" fill="none">
+                  <path d="M 10 6 C 10 6, 14 12, 14 12 C 14 12, 10 18, 10 18" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </CarouselNext>
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
