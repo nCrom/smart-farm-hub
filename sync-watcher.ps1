@@ -3,6 +3,10 @@ $watchPath = "."
 $filter = "*.*"
 $lastSync = Get-Date
 
+# 출력 인코딩을 UTF-8로 설정
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
 # FileSystemWatcher 객체 생성
 $watcher = New-Object System.IO.FileSystemWatcher
 $watcher.Path = $watchPath
@@ -38,7 +42,9 @@ $action = {
     Start-ThreadJob -ScriptBlock {
         git pull origin main --rebase
         git add .
-        git commit -m "자동 동기화: $using:changeType - $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))"
+        $commitMessage = "자동 동기화: $using:changeType - $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))"
+        $commitMessage = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::UTF8.GetBytes($commitMessage))
+        git -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
         git push origin main
     }
 }
