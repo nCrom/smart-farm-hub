@@ -5,8 +5,11 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 
 $ErrorActionPreference = "Stop"
 
-# Git 설정
-#$env:GIT_TRACE = 1
+# Git 환경 변수 설정
+$env:LANG = "en_US.UTF-8"
+$env:LC_ALL = "en_US.UTF-8"
+$env:GIT_COMMITTER_ENCODING = "UTF-8"
+$env:GIT_AUTHOR_ENCODING = "UTF-8"
 
 # 저장소 경로
 $repoPath = "D:\nCrom_server\xampp8.2\htdocs"
@@ -25,9 +28,10 @@ while ($true) {
             
             # 현재 시간으로 커밋
             $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            $commitMessage = "[AUTO] Changes detected at $timestamp"
             
-            # 커밋 실행 (출력 제한)
-            git -c advice.statusHints=false commit -m "Update: $timestamp" | Out-Null
+            # 커밋 실행 (ASCII 메시지 사용)
+            git -c advice.statusHints=false commit -m $commitMessage | Out-Null
             
             # GitHub로 푸시 (출력 제한)
             git -c advice.statusHints=false push origin main --quiet
@@ -36,6 +40,7 @@ while ($true) {
             $message = "====================`n"
             $message += "Time: $timestamp`n"
             $message += "Status: Success`n"
+            $message += "Message: $commitMessage`n"
             $message += "====================`n"
             Add-Content -Path $logFile -Value $message -Encoding UTF8
             
@@ -43,6 +48,7 @@ while ($true) {
             Write-Output "-------------------"
             Write-Output "Time: $timestamp"
             Write-Output "Status: Success"
+            Write-Output "Message: $commitMessage"
             Write-Output "-------------------"
         }
         
