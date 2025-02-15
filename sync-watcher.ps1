@@ -1,27 +1,14 @@
-
 # Real-time Git Sync Script
-# PowerShell 스크립트 인코딩 설정
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 [System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
-$watchPath = "."
+$watchPath = Resolve-Path "."
 $filter = "*.*"
 $lastSync = Get-Date
 $lastGitCheck = Get-Date
 
-# Set output encoding to UTF-8
-Write-Host "Changing PowerShell console code page to UTF-8..."
-$originalCP = [System.Console]::OutputEncoding
-try {
-    [System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-    $Host.UI.RawUI.OutputEncoding = [System.Text.Encoding]::UTF8
-    chcp 65001 | Out-Null
-    Write-Host "Encoding set to UTF-8"
-} catch {
-    Write-Host "Error setting encoding: $_"
-    [System.Console]::OutputEncoding = $originalCP
-}
+Write-Host "Starting Git sync watcher in: $watchPath"
 
 # Create FileSystemWatcher object
 $watcher = New-Object System.IO.FileSystemWatcher
@@ -29,9 +16,10 @@ $watcher.Path = $watchPath
 $watcher.Filter = $filter
 $watcher.IncludeSubdirectories = $true
 $watcher.EnableRaisingEvents = $true
+$watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor [System.IO.NotifyFilters]::LastWrite
 
 # Check GitHub changes function
-function Check-GitHubChanges  {
+function Check-GitHubChanges {
     try {
         git fetch origin
         $status = git status
@@ -42,6 +30,35 @@ function Check-GitHubChanges  {
         }
     } catch {
         Write-Host "Error during GitHub sync: $_" -ForegroundColor Red
+    }
+}
+
+# Sync changes function
+function Sync-Changes {
+    param($changeType, $path)
+    try {
+        # Check if file exists and is not in .git directory
+        if ((-not $path.Contains(".git")) -and (Test-Path $path)) {
+            Write-Host "Processing change: $path ($changeType)" -ForegroundColor Cyan
+            
+            # Add all changes
+            git add .
+            
+            # Check if there are changes to commit
+            $status = git status --porcelain
+            if ($status) {
+                $timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+                $commitMessage = "Auto sync: $changeType - $timestamp"
+                
+                # Commit and push changes
+                git commit -m $commitMessage
+                git push origin main
+                
+                Write-Host "Changes synced successfully" -ForegroundColor Green
+            }
+        }
+    } catch {
+        Write-Host "Error syncing changes: $_" -ForegroundColor Red
     }
 }
 
@@ -67,16 +84,7 @@ $action = {
     }
     
     $script:lastSync = $now
-    Write-Host "Local change detected: $path ($changeType)" -ForegroundColor Cyan
-    
-    # Execute Git commands
-    Start-ThreadJob -ScriptBlock {
-        git add .
-        $timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-        $commitMessage = "Auto sync: $using:changeType - $timestamp"
-        git commit -m $commitMessage
-        git push origin main
-    }
+    Sync-Changes $changeType $path
 }
 
 # Register events
@@ -87,8 +95,12 @@ $handlers = . {
     Register-ObjectEvent -InputObject $watcher -EventName Renamed -Action $action
 }
 
-Write-Host "Starting real-time file change detection... (Press Ctrl+C to stop)" -ForegroundColor Green
+Write-Host "Real-time file monitoring started. Press Ctrl+C to stop." -ForegroundColor Green
+
 try {
+    # Initial sync check
+    Check-GitHubChanges
+    
     do {
         $now = Get-Date
         # Check GitHub changes every 2 seconds
@@ -109,6 +121,4 @@ try {
     Get-Job | Remove-Job -Force
     $watcher.Dispose()
     Write-Host "Monitoring stopped" -ForegroundColor Yellow
-    # Restore original encoding
-    [System.Console]::OutputEncoding = $originalCP
 }
