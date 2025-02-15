@@ -50,10 +50,6 @@ export function Header({
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="text-sm text-gray-600">
-                26분 29초
-                <span className="ml-2 text-blue-600">연결하기</span>
-              </div>
               <button className="p-2 hover:bg-gray-100 rounded-full transition-all relative">
                 <Bell className="w-5 h-5 text-gray-600" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
