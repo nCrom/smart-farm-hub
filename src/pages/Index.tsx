@@ -76,11 +76,11 @@ const Index = () => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 h-8 w-8 bg-white/70 hover:bg-white/90 border-none">
-                <ChevronLeft className="h-6 w-6" />
+              <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 bg-white/70 hover:bg-white/90 border-none">
+                <ChevronLeft className="h-9 w-9" />
               </CarouselPrevious>
-              <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 h-8 w-8 bg-white/70 hover:bg-white/90 border-none">
-                <ChevronRight className="h-6 w-6" />
+              <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 bg-white/70 hover:bg-white/90 border-none">
+                <ChevronRight className="h-9 w-9" />
               </CarouselNext>
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
                 {slideImages.map((_, index) => (
