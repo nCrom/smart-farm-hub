@@ -72,10 +72,10 @@ const Index = () => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors !bg-transparent !border-none !shadow-none !p-0 !m-0">
+              <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors !bg-transparent !border-none !shadow-none !p-0 !m-0 scale-[2.5]">
                 <ChevronLeft className="h-12 w-12" strokeWidth={2} />
               </CarouselPrevious>
-              <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors !bg-transparent !border-none !shadow-none !p-0 !m-0">
+              <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors !bg-transparent !border-none !shadow-none !p-0 !m-0 scale-[2.5]">
                 <ChevronRight className="h-12 w-12" strokeWidth={2} />
               </CarouselNext>
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
