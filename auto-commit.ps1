@@ -1,10 +1,17 @@
 # GitHub Desktop 자동 커밋 스크립트
-$OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+# PowerShell 스크립트 인코딩 설정
+$PSDefaultParameterValues['*:Encoding'] = 'utf8'
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
 $env:LC_ALL = 'ko_KR.UTF-8'
 $env:LANG = 'ko_KR.UTF-8'
 [Console]::InputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $ErrorActionPreference = "Stop"
+
+# Git 설정
+$env:GIT_TRACE = 1
 
 # 저장소 경로
 $repoPath = "D:\nCrom_server\xampp8.2\htdocs"
@@ -22,8 +29,12 @@ while ($true) {
             $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
             $commitMsg = "자동 커밋: $timestamp"
             
-            # 커밋 실행 (직접 메시지 전달)
-            git -c i18n.commitencoding=utf-8 commit -m $commitMsg
+            # 환경 변수 설정하여 커밋
+            $env:GIT_COMMITTER_ENCODING = "utf-8"
+            $env:GIT_AUTHOR_ENCODING = "utf-8"
+            
+            # 커밋 실행
+            git commit -m "$commitMsg"
             
             # GitHub로 푸시
             git push origin main
