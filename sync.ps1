@@ -1,7 +1,6 @@
 
-# Real-time Git Sync Script
-
 # PowerShell 기본 인코딩 설정
+$ErrorActionPreference = "Stop"
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 [System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
@@ -18,11 +17,13 @@ git config --global core.autocrlf false
 $watchPath = "."
 $filter = "*.*"
 
-# 변경사항 동기화 함수
+# 파일 변경 감지 함수
 function Sync-GitChanges {
-    param($changeType, $path)
+    param(
+        [string]$changeType,
+        [string]$path
+    )
     
-    # .git 디렉토리, 복사본 파일, node_modules 무시
     if ($path -like "*.git*" -or $path -like "*복사본*" -or $path -like "*node_modules*") {
         return
     }
@@ -30,7 +31,6 @@ function Sync-GitChanges {
     Write-Host "`n변경 감지: $changeType - $path" -ForegroundColor Cyan
 
     try {
-        # Git 환경 변수 설정
         $env:LANG = "en_US.UTF-8"
         $env:LC_ALL = "en_US.UTF-8"
 
@@ -53,16 +53,15 @@ function Sync-GitChanges {
     }
 }
 
-Write-Host "실시간 Git 동기화 시작..." -ForegroundColor Green
+# 메인 스크립트 시작
+Write-Host "Git 실시간 동기화 시작..." -ForegroundColor Green
 
-# FileSystemWatcher 설정
 $watcher = New-Object System.IO.FileSystemWatcher
 $watcher.Path = $watchPath
 $watcher.Filter = $filter
 $watcher.IncludeSubdirectories = $true
 $watcher.EnableRaisingEvents = $true
 
-# 이벤트 핸들러
 $handlers = @()
 
 $handlers += Register-ObjectEvent $watcher Created -Action {
@@ -84,17 +83,13 @@ $handlers += Register-ObjectEvent $watcher Renamed -Action {
 Write-Host "파일 감시 시작. 중지하려면 Ctrl+C를 누르세요." -ForegroundColor Green
 
 try {
-    # 초기 동기화
     git pull origin main
-    
-    # 무한 대기
     while ($true) { Start-Sleep -Seconds 1 }
 }
 catch {
     Write-Host "프로그램 종료: $_" -ForegroundColor Red
 }
 finally {
-    # 이벤트 핸들러 정리
     $handlers | ForEach-Object {
         Unregister-Event -SourceIdentifier $_.Name
         Remove-Job -Id $_.Id -Force
