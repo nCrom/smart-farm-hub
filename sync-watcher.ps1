@@ -1,8 +1,14 @@
-
 # Real-time Git Sync Script
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 [System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
+
+# Git 설정을 스크립트 실행 시점에 강제로 적용
+git config --global core.quotepath off
+git config --global i18n.commitencoding utf-8
+git config --global i18n.logoutputencoding utf-8
+git config --global core.precomposeunicode true
+git config --global core.autocrlf false
 
 $watchPath = Resolve-Path "."
 $filter = "*.*"
@@ -10,13 +16,6 @@ $lastSync = Get-Date
 $lastGitCheck = Get-Date
 
 Write-Host "Starting Git sync watcher in: $watchPath"
-
-# Git 설정
-git config --global core.quotepath off
-git config --global i18n.commitencoding utf-8
-git config --global i18n.logoutputencoding utf-8
-git config --global core.precomposeunicode true
-git config --global core.autocrlf false
 
 # Create FileSystemWatcher object
 $watcher = New-Object System.IO.FileSystemWatcher
@@ -58,16 +57,27 @@ function Sync-Changes {
                 # Get the relative path for the commit message
                 $relativePath = (Resolve-Path -Relative $path).TrimStart(".\")
                 
-                # Set environment variables for Git
+                # 영문으로만 구성된 간단한 커밋 메시지 생성
+                $commitMessage = "Update: $relativePath"
+                
+                # Git 환경 변수 설정
                 $env:LANG = "en_US.UTF-8"
                 $env:LC_ALL = "en_US.UTF-8"
+                $env:GIT_COMMITTER_NAME = "nCrom"
+                $env:GIT_COMMITTER_EMAIL = "realpano@naver.com"
                 
-                # Create commit message with timestamp
-                $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-                $commitMessage = "Update: $relativePath ($timestamp)"
+                # PowerShell의 기본 인코딩을 UTF-8로 설정
+                $PSDefaultParameterValues['*:Encoding'] = 'utf8'
+                [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+                $OutputEncoding = [System.Text.Encoding]::UTF8
                 
-                # Commit and push changes with explicit encoding
-                & git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
+                # 커밋 실행 (UTF-8 인코딩 강제 적용)
+                $commitCommand = "git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m `"$commitMessage`""
+                $commitBytes = [System.Text.Encoding]::UTF8.GetBytes($commitCommand)
+                $commitString = [System.Text.Encoding]::UTF8.GetString($commitBytes)
+                Invoke-Expression $commitString
+                
+                # 변경사항 푸시
                 git push origin main
                 
                 Write-Host "Changes synced successfully" -ForegroundColor Green
