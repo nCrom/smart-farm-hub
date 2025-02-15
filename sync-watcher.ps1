@@ -82,12 +82,10 @@ function Sync-Changes {
             
             # 먼저 untracked 파일인지 확인
             $gitStatus = git status --porcelain "$path"
-            if ($gitStatus -like "?? *") {
-                Write-Host "New file detected. Adding to git..." -ForegroundColor Yellow
-            }
+            Write-Host "Git status for $path : $gitStatus" -ForegroundColor Cyan
             
-            # 모든 경우에 git add 실행
-            git add "$path"
+            # 강제로 git add 실행 (-f 옵션 사용)
+            git add -f "$path"
             
             $status = git status --porcelain
             if ($status) {
@@ -99,19 +97,19 @@ function Sync-Changes {
                 
                 Write-Host "Pushing changes..." -ForegroundColor Yellow
                 git pull origin main --rebase
-                git push origin main
+                git push origin main -f
                 
                 Write-Host "Changes synced successfully" -ForegroundColor Green
             }
         }
         elseif ($changeType -eq "Deleted") {
             Write-Host "File deleted: $path" -ForegroundColor Yellow
-            git rm "$path"
+            git rm -f "$path"
             
             $commitMessage = "Delete: $((Split-Path $path -Leaf))"
             git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
             git pull origin main --rebase
-            git push origin main
+            git push origin main -f
             
             Write-Host "File deletion synced to GitHub" -ForegroundColor Green
         }
