@@ -31,15 +31,26 @@ $watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor [System.IO.Noti
 # Check GitHub changes function
 function Check-GitHubChanges {
     try {
+        Write-Host "Checking for GitHub changes..." -ForegroundColor Cyan
         git fetch origin
-        $status = git status
-        if ($status -like "*Your branch is behind*") {
+        $localHash = git rev-parse HEAD
+        $remoteHash = git rev-parse origin/main
+        
+        if ($localHash -ne $remoteHash) {
             Write-Host "GitHub changes detected. Syncing..." -ForegroundColor Yellow
+            git stash push -u -m "Local changes stashed before pull"
             git pull origin main --rebase
+            $stashList = git stash list
+            if ($stashList) {
+                git stash pop
+            }
             Write-Host "GitHub sync completed" -ForegroundColor Green
+            return $true
         }
+        return $false
     } catch {
         Write-Host "Error during GitHub sync: $_" -ForegroundColor Red
+        return $false
     }
 }
 
@@ -79,6 +90,7 @@ function Sync-Changes {
                 git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
                 
                 Write-Host "Pushing changes..." -ForegroundColor Yellow
+                git pull origin main --rebase
                 git push origin main
                 
                 Write-Host "Changes synced successfully" -ForegroundColor Green
@@ -90,6 +102,7 @@ function Sync-Changes {
             
             $commitMessage = "Delete: $((Split-Path $path -Leaf))"
             git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
+            git pull origin main --rebase
             git push origin main
             
             Write-Host "File deletion synced to GitHub" -ForegroundColor Green
@@ -137,6 +150,15 @@ try {
     Check-GitHubChanges
     
     do {
+        # GitHub 변경사항 체크 (매 1초마다)
+        $now = Get-Date
+        if (($now - $script:lastGitCheck).TotalSeconds -ge 1) {
+            $script:lastGitCheck = $now
+            if (Check-GitHubChanges) {
+                Write-Host "Remote changes applied successfully" -ForegroundColor Green
+            }
+        }
+        
         Wait-Event -Timeout 1
         Get-Job | Where-Object { $_.State -eq 'Completed' } | Remove-Job
     } while ($true)
