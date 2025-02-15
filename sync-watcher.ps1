@@ -65,33 +65,16 @@ function Sync-Changes {
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
         $OutputEncoding = [System.Text.Encoding]::UTF8
 
-        # 파일이 삭제된 경우
-        if ($changeType -eq "Deleted") {
-            Write-Host "File deleted: $path" -ForegroundColor Yellow
-            
-            # Git에서 파일 삭제 및 커밋
-            git rm "$path"
-            $commitMessage = "Delete: $((Get-Item $path).Name)"
-            git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
-            git push origin main
-            
-            Write-Host "File deletion synced to GitHub" -ForegroundColor Green
-        }
-        # 파일이 생성되거나 수정된 경우
-        elseif (($changeType -eq "Created" -or $changeType -eq "Changed") -and (Test-Path $path)) {
+        # 변경 사항을 즉시 커밋하고 푸시
+        if (Test-Path $path) {
             Write-Host "Adding changes..." -ForegroundColor Yellow
-            
-            # 변경된 파일만 추가
             git add "$path"
             
-            # Check if there are changes to commit
             $status = git status --porcelain
             if ($status) {
-                # Get the relative path for the commit message
                 $relativePath = (Resolve-Path -Relative $path).TrimStart(".\")
                 $commitMessage = "Update: $relativePath"
                 
-                # Commit and push changes with UTF-8 encoding
                 Write-Host "Committing changes..." -ForegroundColor Yellow
                 git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
                 
@@ -101,8 +84,22 @@ function Sync-Changes {
                 Write-Host "Changes synced successfully" -ForegroundColor Green
             }
         }
+        elseif ($changeType -eq "Deleted") {
+            Write-Host "File deleted: $path" -ForegroundColor Yellow
+            git rm "$path"
+            
+            $commitMessage = "Delete: $((Split-Path $path -Leaf))"
+            git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
+            git push origin main
+            
+            Write-Host "File deletion synced to GitHub" -ForegroundColor Green
+        }
     } catch {
         Write-Host "Error syncing changes: $_" -ForegroundColor Red
+        
+        # 에러 발생 시 git 상태 출력
+        Write-Host "Git Status:" -ForegroundColor Yellow
+        git status
     }
 }
 
@@ -110,7 +107,6 @@ function Sync-Changes {
 $action = {
     $path = $Event.SourceEventArgs.FullPath
     $changeType = $Event.SourceEventArgs.ChangeType
-    $now = Get-Date
     
     # Ignore node_modules changes
     if ($path -like "*node_modules*") {
@@ -122,12 +118,7 @@ $action = {
         return
     }
     
-    # 딜레이를 100ms로 줄임
-    if (($now - $script:lastSync).TotalMilliseconds -lt 100) {
-        return
-    }
-    
-    $script:lastSync = $now
+    Write-Host "Change detected: $changeType - $path" -ForegroundColor Yellow
     Sync-Changes $changeType $path
 }
 
@@ -146,15 +137,7 @@ try {
     Check-GitHubChanges
     
     do {
-        $now = Get-Date
-        # GitHub 변경사항 체크 주기를 1초로 줄임
-        if (($now - $script:lastGitCheck).TotalSeconds -ge 1) {
-            $script:lastGitCheck = $now
-            Check-GitHubChanges
-        }
-        
-        Wait-Event -Timeout 0.1
-        # Clean up background jobs
+        Wait-Event -Timeout 1
         Get-Job | Where-Object { $_.State -eq 'Completed' } | Remove-Job
     } while ($true)
 } finally {
