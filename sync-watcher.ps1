@@ -60,23 +60,9 @@ function Sync-Changes {
             git add -f "$path"
             git commit -m "Update: $((Split-Path $path -Leaf))"
             
-            # 원격 저장소의 변경사항 가져와서 리베이스
-            Write-Host "Fetching and rebasing with remote..." -ForegroundColor Yellow
-            git fetch origin
-            git rebase origin/main
-            
-            # 충돌이 있는지 확인
-            $conflicts = git diff --name-only --diff-filter=U
-            if ($conflicts) {
-                Write-Host "Conflicts detected. Resolving..." -ForegroundColor Yellow
-                git checkout --theirs "$path"
-                git add "$path"
-                git rebase --continue
-            }
-            
-            # 변경사항 푸시
-            Write-Host "Pushing changes..." -ForegroundColor Yellow
-            git push origin main
+            # 강제 푸시 (원격 저장소의 변경사항 무시)
+            Write-Host "Force pushing changes..." -ForegroundColor Yellow
+            git push -f origin main
             
             Write-Host "Changes synced successfully" -ForegroundColor Green
         }
@@ -87,11 +73,9 @@ function Sync-Changes {
             git rm -f "$path"
             git commit -m "Delete: $((Split-Path $path -Leaf))"
             
-            # 원격 저장소와 동기화
-            Write-Host "Syncing with remote..." -ForegroundColor Yellow
-            git fetch origin
-            git rebase origin/main
-            git push origin main
+            # 강제 푸시
+            Write-Host "Force pushing deletion..." -ForegroundColor Yellow
+            git push -f origin main
             
             Write-Host "Deletion synced successfully" -ForegroundColor Green
         }
@@ -132,8 +116,9 @@ $handlers = . {
 Write-Host "Real-time file monitoring started. Press Ctrl+C to stop." -ForegroundColor Green
 
 try {
-    # 스크립트 시작 시 git reset 실행
-    Write-Host "Resetting git state..." -ForegroundColor Yellow
+    # 스크립트 시작 시 강제로 원격 저장소 상태로 초기화
+    Write-Host "Resetting to remote state..." -ForegroundColor Yellow
+    git fetch origin
     git reset --hard origin/main
     git clean -fd
     
