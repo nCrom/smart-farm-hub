@@ -29,24 +29,27 @@ while ($true) {
             
             # 현재 시간으로 커밋
             $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-            $commitMsg = "자동 커밋: $timestamp"
             
-            # 환경 변수 설정하여 커밋 (출력 제한)
-            $env:GIT_COMMITTER_ENCODING = "utf-8"
-            $env:GIT_AUTHOR_ENCODING = "utf-8"
-            git -c advice.statusHints=false commit -m "$commitMsg" | Out-Null
+            # 커밋 실행 (출력 제한)
+            git -c advice.statusHints=false commit -m "Auto commit: $timestamp" | Out-Null
             
             # GitHub로 푸시 (출력 제한)
             git -c advice.statusHints=false push origin main --quiet
             
-            Write-Host "변경사항이 커밋되었습니다: $timestamp" -ForegroundColor Green
+            Write-Output "============================================="
+            Write-Output "새로운 변경사항이 커밋되었습니다"
+            Write-Output "시간: $timestamp"
+            Write-Output "============================================="
         }
         
         # 30초 대기
         Start-Sleep -Seconds 30
     }
     catch {
-        Write-Host "오류 발생: $_" -ForegroundColor Red
+        Write-Output "============================================="
+        Write-Output "오류가 발생했습니다"
+        Write-Output "$_"
+        Write-Output "============================================="
         Start-Sleep -Seconds 10
     }
 }
