@@ -2,7 +2,7 @@
 import { Header } from "../components/layout/Header";
 import { WeatherCard } from "../components/dashboard/WeatherCard";
 import { DeviceOverview } from "../components/dashboard/DeviceOverview";
-import { Search } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import {
   Carousel,
@@ -32,6 +32,7 @@ const slideImages = [
 
 const Index = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-100 via-blue-50 to-orange-50">
@@ -44,11 +45,11 @@ const Index = () => {
           </div>
 
           <div className="w-full">
-            <Carousel className="relative">
+            <Carousel className="relative" onSelect={(api) => setCurrentSlide(api.selectedScrollSnap())}>
               <CarouselContent>
                 {slideImages.map((image) => (
                   <CarouselItem key={image.id}>
-                    <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl">
+                    <div className="relative aspect-[21/9] w-full overflow-hidden">
                       <img
                         src={image.url}
                         alt={image.title}
@@ -63,8 +64,22 @@ const Index = () => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2" />
-              <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2" />
+              <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 h-8 w-8 bg-white/70 hover:bg-white/90 border-none">
+                <ChevronLeft className="h-6 w-6" />
+              </CarouselPrevious>
+              <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 h-8 w-8 bg-white/70 hover:bg-white/90 border-none">
+                <ChevronRight className="h-6 w-6" />
+              </CarouselNext>
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                {slideImages.map((_, index) => (
+                  <div
+                    key={index}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      currentSlide === index ? "bg-white" : "bg-white/50"
+                    }`}
+                  />
+                ))}
+              </div>
             </Carousel>
           </div>
 
