@@ -15,8 +15,6 @@ git config --global core.autocrlf false
 
 $watchPath = Resolve-Path "."
 $filter = "*.*"
-$lastSync = Get-Date
-$lastGitCheck = Get-Date
 
 Write-Host "Starting Git sync watcher in: $watchPath"
 
@@ -27,50 +25,6 @@ $watcher.Filter = $filter
 $watcher.IncludeSubdirectories = $true
 $watcher.EnableRaisingEvents = $true
 $watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor [System.IO.NotifyFilters]::LastWrite -bor [System.IO.NotifyFilters]::Size -bor [System.IO.NotifyFilters]::CreationTime
-
-# Check GitHub changes function
-function Check-GitHubChanges {
-    try {
-        Write-Host "Checking for GitHub changes..." -ForegroundColor Cyan
-        
-        # 원격 저장소의 변경사항 가져오기
-        git fetch origin
-        
-        # 현재 브랜치와 원격 브랜치의 커밋 해시 비교
-        $localHash = git rev-parse HEAD
-        $remoteHash = git rev-parse origin/main
-        
-        if ($localHash -ne $remoteHash) {
-            Write-Host "GitHub changes detected. Syncing..." -ForegroundColor Yellow
-            
-            # 현재 작업 내용 임시 저장
-            git stash push -u -m "Local changes stashed before pull"
-            
-            # 원격 변경사항 가져오기
-            git pull origin main --rebase
-            
-            # 임시 저장한 작업 내용이 있다면 복원
-            $stashList = git stash list
-            if ($stashList) {
-                git stash pop
-                
-                # 충돌이 있는지 확인
-                $status = git status --porcelain
-                if ($status -match "UU") {
-                    Write-Host "Merge conflicts detected. Please resolve manually." -ForegroundColor Red
-                    return $false
-                }
-            }
-            
-            Write-Host "GitHub sync completed" -ForegroundColor Green
-            return $true
-        }
-        return $false
-    } catch {
-        Write-Host "Error during GitHub sync: $_" -ForegroundColor Red
-        return $false
-    }
-}
 
 # Sync changes function
 function Sync-Changes {
@@ -175,22 +129,15 @@ $handlers = . {
 Write-Host "Real-time file monitoring started. Press Ctrl+C to stop." -ForegroundColor Green
 
 try {
-    # Initial sync check
-    Check-GitHubChanges
+    # 초기 Git 상태 확인 및 최신 변경사항 가져오기
+    Write-Host "Performing initial git pull..." -ForegroundColor Cyan
+    git pull origin main --rebase
     
-    do {
-        # GitHub 변경사항 체크 (매 1초마다)
-        $now = Get-Date
-        if (($now - $script:lastGitCheck).TotalSeconds -ge 1) {
-            $script:lastGitCheck = $now
-            if (Check-GitHubChanges) {
-                Write-Host "Remote changes applied successfully" -ForegroundColor Green
-            }
-        }
-        
+    # 이벤트 대기
+    while ($true) {
         Wait-Event -Timeout 1
         Get-Job | Where-Object { $_.State -eq 'Completed' } | Remove-Job
-    } while ($true)
+    }
 } finally {
     # Cleanup
     $handlers | ForEach-Object {
