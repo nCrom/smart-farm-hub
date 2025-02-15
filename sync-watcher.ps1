@@ -79,6 +79,14 @@ function Sync-Changes {
         # 변경 사항을 즉시 커밋하고 푸시
         if (Test-Path $path) {
             Write-Host "Adding changes..." -ForegroundColor Yellow
+            
+            # 먼저 untracked 파일인지 확인
+            $gitStatus = git status --porcelain "$path"
+            if ($gitStatus -like "?? *") {
+                Write-Host "New file detected. Adding to git..." -ForegroundColor Yellow
+            }
+            
+            # 모든 경우에 git add 실행
             git add "$path"
             
             $status = git status --porcelain
