@@ -11,6 +11,13 @@ $lastGitCheck = Get-Date
 
 Write-Host "Starting Git sync watcher in: $watchPath"
 
+# Git 설정
+git config --global core.quotepath off
+git config --global i18n.commitencoding utf-8
+git config --global i18n.logoutputencoding utf-8
+git config --global core.precomposeunicode true
+git config --global core.autocrlf false
+
 # Create FileSystemWatcher object
 $watcher = New-Object System.IO.FileSystemWatcher
 $watcher.Path = $watchPath
@@ -51,19 +58,83 @@ function Sync-Changes {
                 # Get the relative path for the commit message
                 $relativePath = (Resolve-Path -Relative $path).TrimStart(".\")
                 
-                # Create a simple commit message with only ASCII characters
-                $commitMessage = "Update: $relativePath"
-                
                 # Set environment variables for Git
                 $env:LANG = "en_US.UTF-8"
                 $env:LC_ALL = "en_US.UTF-8"
                 
+                # Create commit message with timestamp
+                $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                $commitMessage = "Update: $relativePath ($timestamp)"
+                
                 # Commit and push changes with explicit encoding
-                git -c i18n.commitencoding=utf-8 commit -m $commitMessage
+                & git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
                 git push origin main
                 
                 Write-Host "Changes synced successfully" -ForegroundColor Green
             }
         }
     } catch {
-        Write-Host "Error
+        Write-Host "Error syncing changes: $_" -ForegroundColor Red
+    }
+}
+
+# Change event handler
+$action = {
+    $path = $Event.SourceEventArgs.FullPath
+    $changeType = $Event.SourceEventArgs.ChangeType
+    $now = Get-Date
+    
+    # Ignore node_modules changes
+    if ($path -like "*node_modules*") {
+        return
+    }
+    
+    # Ignore .git folder changes
+    if ($path -like "*.git*") {
+        return
+    }
+    
+    # Check if enough time has passed since last sync
+    if (($now - $script:lastSync).TotalMilliseconds -lt 500) {
+        return
+    }
+    
+    $script:lastSync = $now
+    Sync-Changes $changeType $path
+}
+
+# Register events
+$handlers = . {
+    Register-ObjectEvent -InputObject $watcher -EventName Created -Action $action
+    Register-ObjectEvent -InputObject $watcher -EventName Changed -Action $action
+    Register-ObjectEvent -InputObject $watcher -EventName Deleted -Action $action
+    Register-ObjectEvent -InputObject $watcher -EventName Renamed -Action $action
+}
+
+Write-Host "Real-time file monitoring started. Press Ctrl+C to stop." -ForegroundColor Green
+
+try {
+    # Initial sync check
+    Check-GitHubChanges
+    
+    do {
+        $now = Get-Date
+        # Check GitHub changes every 2 seconds
+        if (($now - $script:lastGitCheck).TotalSeconds -ge 2) {
+            $script:lastGitCheck = $now
+            Check-GitHubChanges
+        }
+        
+        Wait-Event -Timeout 0.1
+        # Clean up background jobs
+        Get-Job | Where-Object { $_.State -eq 'Completed' } | Remove-Job
+    } while ($true)
+} finally {
+    # Cleanup
+    $handlers | ForEach-Object {
+        Unregister-Event -SourceIdentifier $_.Name
+    }
+    Get-Job | Remove-Job -Force
+    $watcher.Dispose()
+    Write-Host "Monitoring stopped" -ForegroundColor Yellow
+}
