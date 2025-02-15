@@ -32,18 +32,36 @@ $watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor [System.IO.Noti
 function Check-GitHubChanges {
     try {
         Write-Host "Checking for GitHub changes..." -ForegroundColor Cyan
+        
+        # 원격 저장소의 변경사항 가져오기
         git fetch origin
+        
+        # 현재 브랜치와 원격 브랜치의 커밋 해시 비교
         $localHash = git rev-parse HEAD
         $remoteHash = git rev-parse origin/main
         
         if ($localHash -ne $remoteHash) {
             Write-Host "GitHub changes detected. Syncing..." -ForegroundColor Yellow
+            
+            # 현재 작업 내용 임시 저장
             git stash push -u -m "Local changes stashed before pull"
+            
+            # 원격 변경사항 가져오기
             git pull origin main --rebase
+            
+            # 임시 저장한 작업 내용이 있다면 복원
             $stashList = git stash list
             if ($stashList) {
                 git stash pop
+                
+                # 충돌이 있는지 확인
+                $status = git status --porcelain
+                if ($status -match "UU") {
+                    Write-Host "Merge conflicts detected. Please resolve manually." -ForegroundColor Red
+                    return $false
+                }
             }
+            
             Write-Host "GitHub sync completed" -ForegroundColor Green
             return $true
         }
@@ -96,6 +114,8 @@ function Sync-Changes {
                 git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
                 
                 Write-Host "Pushing changes..." -ForegroundColor Yellow
+                # 원격 변경사항 먼저 가져오고 로컬 변경사항 푸시
+                git fetch origin
                 git pull origin main --rebase
                 git push origin main -f
                 
@@ -108,6 +128,9 @@ function Sync-Changes {
             
             $commitMessage = "Delete: $((Split-Path $path -Leaf))"
             git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
+            
+            # 원격 변경사항 먼저 가져오고 로컬 변경사항 푸시
+            git fetch origin
             git pull origin main --rebase
             git push origin main -f
             
