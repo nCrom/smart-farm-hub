@@ -1,7 +1,8 @@
+
 @echo off
 chcp 65001 > nul
-set LANG=en_US.UTF-8
-set LC_ALL=en_US.UTF-8
+set LANG=ko_KR.UTF-8
+set LC_ALL=ko_KR.UTF-8
 set GIT_COMMITTER_ENCODING=UTF-8
 set GIT_AUTHOR_ENCODING=UTF-8
 set GIT_TERMINAL_PROMPT=0
