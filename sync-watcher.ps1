@@ -1,3 +1,4 @@
+
 # Real-time Git Sync Script
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 [System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -65,67 +66,4 @@ function Sync-Changes {
             }
         }
     } catch {
-        Write-Host "Error syncing changes: $_" -ForegroundColor Red
-    }
-}
-
-# Change event handler
-$action = {
-    $path = $Event.SourceEventArgs.FullPath
-    $changeType = $Event.SourceEventArgs.ChangeType
-    $now = Get-Date
-    
-    # Ignore node_modules changes
-    if ($path -like "*node_modules*") {
-        return
-    }
-    
-    # Ignore .git folder changes
-    if ($path -like "*.git*") {
-        return
-    }
-    
-    # Check if enough time has passed since last sync
-    if (($now - $script:lastSync).TotalMilliseconds -lt 500) {
-        return
-    }
-    
-    $script:lastSync = $now
-    Sync-Changes $changeType $path
-}
-
-# Register events
-$handlers = . {
-    Register-ObjectEvent -InputObject $watcher -EventName Created -Action $action
-    Register-ObjectEvent -InputObject $watcher -EventName Changed -Action $action
-    Register-ObjectEvent -InputObject $watcher -EventName Deleted -Action $action
-    Register-ObjectEvent -InputObject $watcher -EventName Renamed -Action $action
-}
-
-Write-Host "Real-time file monitoring started. Press Ctrl+C to stop." -ForegroundColor Green
-
-try {
-    # Initial sync check
-    Check-GitHubChanges
-    
-    do {
-        $now = Get-Date
-        # Check GitHub changes every 2 seconds
-        if (($now - $script:lastGitCheck).TotalSeconds -ge 2) {
-            $script:lastGitCheck = $now
-            Check-GitHubChanges
-        }
-        
-        Wait-Event -Timeout 0.1
-        # Clean up background jobs
-        Get-Job | Where-Object { $_.State -eq 'Completed' } | Remove-Job
-    } while ($true)
-} finally {
-    # Cleanup
-    $handlers | ForEach-Object {
-        Unregister-Event -SourceIdentifier $_.Name
-    }
-    Get-Job | Remove-Job -Force
-    $watcher.Dispose()
-    Write-Host "Monitoring stopped" -ForegroundColor Yellow
-}
+        Write-Host "Error
