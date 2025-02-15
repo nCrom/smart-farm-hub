@@ -1,4 +1,6 @@
 # GitHub Desktop 자동 커밋 스크립트
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
 
 # 저장소 경로
