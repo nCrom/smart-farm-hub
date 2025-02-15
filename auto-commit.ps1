@@ -22,13 +22,8 @@ while ($true) {
             $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
             $commitMsg = "자동 커밋: $timestamp"
             
-            # UTF-8 without BOM으로 커밋 메시지 저장
-            $utf8NoBom = New-Object System.Text.UTF8Encoding $false
-            [System.IO.File]::WriteAllLines("$env:TEMP\commit_msg.txt", @($commitMsg), $utf8NoBom)
-            
-            # 커밋 실행
-            git -c i18n.commitencoding=utf-8 commit -F "$env:TEMP\commit_msg.txt"
-            Remove-Item "$env:TEMP\commit_msg.txt"
+            # 커밋 실행 (직접 메시지 전달)
+            git -c i18n.commitencoding=utf-8 commit -m $commitMsg
             
             # GitHub로 푸시
             git push origin main
