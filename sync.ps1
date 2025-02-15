@@ -1,8 +1,7 @@
-
 # Git 실시간 동기화 스크립트
 $ErrorActionPreference = "Stop"
 
-# Windows 11 인코딩 설정
+# 인코딩 설정
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
@@ -19,43 +18,49 @@ $filter = "*.*"
 
 # 동기화 함수
 function Sync-Changes {
-    param (
-        [string]$changeType,
-        [string]$fullPath
-    )
+    param($changeType, $path)
     
-    # 무시할 경로 체크
-    if ($fullPath -like "*.git*" -or 
-        $fullPath -like "*node_modules*" -or 
-        $fullPath -like "*복사본*") {
+    if ($path -like "*.git*" -or $path -like "*node_modules*") {
+        Write-Host "무시된 파일: $path" -ForegroundColor Gray
         return
     }
 
-    Write-Host "`n변경 감지: $changeType - $fullPath" -ForegroundColor Cyan
+    Write-Host "`n변경 감지: [$changeType] $path" -ForegroundColor Cyan
 
     try {
-        # Git 환경변수 설정
-        $env:LANG = "ko_KR.UTF-8"
-        $env:LC_ALL = "ko_KR.UTF-8"
+        # 변경 사항 확인
+        $status = git status --porcelain
+        if (-not $status) {
+            Write-Host "변경 사항 없음" -ForegroundColor Gray
+            return
+        }
 
-        # 파일 존재 여부에 따른 처리
-        if (Test-Path $fullPath) {
-            git add $fullPath
-            git commit -m "Update: $((Split-Path $fullPath -Leaf))"
+        Write-Host "변경 사항:" -ForegroundColor Yellow
+        git status --short
+
+        # 파일 처리
+        if (Test-Path $path) {
+            Write-Host "파일 추가 중..." -ForegroundColor Yellow
+            git add "$path"
+            git commit -m "변경: $((Split-Path $path -Leaf))"
         }
         else {
-            git rm $fullPath
-            git commit -m "Delete: $((Split-Path $fullPath -Leaf))"
+            Write-Host "파일 삭제 중..." -ForegroundColor Yellow
+            git rm "$path"
+            git commit -m "삭제: $((Split-Path $path -Leaf))"
         }
-
+        
         # 원격 저장소 동기화
+        Write-Host "원격 저장소와 동기화 중..." -ForegroundColor Yellow
         git pull --rebase origin main
         git push origin main
-
+        
         Write-Host "동기화 완료" -ForegroundColor Green
     }
     catch {
-        Write-Host "오류 발생: $_" -ForegroundColor Red
+        Write-Host "오류 발생:" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        Write-Host "`nGit 상태:" -ForegroundColor Yellow
         git status
     }
 }
@@ -70,24 +75,20 @@ $watcher.EnableRaisingEvents = $true
 # 이벤트 핸들러 등록
 $handlers = @()
 
-$handlers += Register-ObjectEvent $watcher Created -Action {
-    Sync-Changes "Created" $Event.SourceEventArgs.FullPath
+$handlers += Register-ObjectEvent $watcher "Created" -Action {
+    Sync-Changes "생성됨" $Event.SourceEventArgs.FullPath
 }
 
-$handlers += Register-ObjectEvent $watcher Changed -Action {
-    Sync-Changes "Changed" $Event.SourceEventArgs.FullPath
+$handlers += Register-ObjectEvent $watcher "Changed" -Action {
+    Sync-Changes "수정됨" $Event.SourceEventArgs.FullPath
 }
 
-$handlers += Register-ObjectEvent $watcher Deleted -Action {
-    Sync-Changes "Deleted" $Event.SourceEventArgs.FullPath
+$handlers += Register-ObjectEvent $watcher "Deleted" -Action {
+    Sync-Changes "삭제됨" $Event.SourceEventArgs.FullPath
 }
 
-$handlers += Register-ObjectEvent $watcher Renamed -Action {
-    Sync-Changes "Renamed" $Event.SourceEventArgs.FullPath
-}
-
-Write-Host "Git 실시간 동기화 시작..." -ForegroundColor Green
-Write-Host "종료하려면 Ctrl+C를 누르세요." -ForegroundColor Yellow
+Write-Host "Git 실시간 동기화 시작 (Ctrl+C로 종료)" -ForegroundColor Green
+Write-Host "감시 중인 경로: $(Resolve-Path $watchPath)" -ForegroundColor Yellow
 
 try {
     # 초기 동기화
