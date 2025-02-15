@@ -1,5 +1,7 @@
+
 import { Bell, Search, User, Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
+
 const menuItems = [{
   label: "대시보드",
   path: "/"
@@ -25,10 +27,12 @@ const menuItems = [{
   label: "설정",
   path: "/settings"
 }];
+
 interface HeaderProps {
   isMenuOpen: boolean;
   onMenuOpenChange: (isOpen: boolean) => void;
 }
+
 export function Header({
   isMenuOpen,
   onMenuOpenChange
@@ -58,10 +62,6 @@ export function Header({
               </button>
             </div>
           </div>
-          <div className="flex items-center gap-4 w-full max-w-md mx-auto py-3">
-            <Search className="w-5 h-5 text-gray-400" />
-            <input type="text" placeholder="검색어를 입력하세요..." className="w-full bg-gray-50/50 border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all" />
-          </div>
         </div>
       </header>
 
@@ -70,10 +70,6 @@ export function Header({
           <div className="fixed inset-0 bg-black/50" onClick={() => onMenuOpenChange(false)} />
           <div className="fixed top-16 left-0 right-0 bottom-0 bg-white z-20 overflow-y-auto">
             <div className="p-4">
-              <div className="flex items-center gap-4 w-full mb-4">
-                <Search className="w-5 h-5 text-gray-400" />
-                <input type="text" placeholder="검색어를 입력하세요..." className="w-full bg-gray-50/50 border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all" />
-              </div>
               <nav>
                 {menuItems.map(item => <Link key={item.path} to={item.path} onClick={() => onMenuOpenChange(false)} className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-all rounded-lg">
                     <span className="font-medium">{item.label}</span>
