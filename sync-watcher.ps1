@@ -47,10 +47,38 @@ function Check-GitHubChanges {
 function Sync-Changes {
     param($changeType, $path)
     try {
-        # Check if file exists and is not in .git directory
-        if ((-not $path.Contains(".git")) -and (Test-Path $path)) {
-            Write-Host "Processing change: $path ($changeType)" -ForegroundColor Cyan
+        # Ignore .git directory changes
+        if ($path -like "*.git*") {
+            return
+        }
+
+        Write-Host "Processing $changeType for path: $path" -ForegroundColor Cyan
+
+        # Git 환경 변수 설정
+        $env:LANG = "en_US.UTF-8"
+        $env:LC_ALL = "en_US.UTF-8"
+        $env:GIT_COMMITTER_NAME = "nCrom"
+        $env:GIT_COMMITTER_EMAIL = "realpano@naver.com"
+
+        # PowerShell의 기본 인코딩을 UTF-8로 설정
+        $PSDefaultParameterValues['*:Encoding'] = 'utf8'
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+
+        # 파일이 삭제된 경우
+        if ($changeType -eq "Deleted") {
+            Write-Host "File deleted: $path" -ForegroundColor Yellow
             
+            # Git에서 파일 삭제 및 커밋
+            git rm "$path"
+            $commitMessage = "Delete: $((Get-Item $path).Name)"
+            git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
+            git push origin main
+            
+            Write-Host "File deletion synced to GitHub" -ForegroundColor Green
+        }
+        # 파일이 생성되거나 수정된 경우
+        elseif (($changeType -eq "Created" -or $changeType -eq "Changed") -and (Test-Path $path)) {
             # Add all changes
             git add .
             
@@ -59,36 +87,18 @@ function Sync-Changes {
             if ($status) {
                 # Get the relative path for the commit message
                 $relativePath = (Resolve-Path -Relative $path).TrimStart(".\")
-                
-                # 영문으로만 구성된 간단한 커밋 메시지 생성
                 $commitMessage = "Update: $relativePath"
                 
-                # Git 환경 변수 설정
-                $env:LANG = "en_US.UTF-8"
-                $env:LC_ALL = "en_US.UTF-8"
-                $env:GIT_COMMITTER_NAME = "nCrom"
-                $env:GIT_COMMITTER_EMAIL = "realpano@naver.com"
-                
-                # PowerShell의 기본 인코딩을 UTF-8로 설정
-                $PSDefaultParameterValues['*:Encoding'] = 'utf8'
-                [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-                $OutputEncoding = [System.Text.Encoding]::UTF8
-                
-                # 커밋 실행 (UTF-8 인코딩 강제 적용)
-                Write-Host "Committing changes..." -ForegroundColor Yellow
-                $commitCommand = "git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m `"$commitMessage`""
-                Invoke-Expression $commitCommand
-                
-                # 변경사항 푸시
-                Write-Host "Pushing changes..." -ForegroundColor Yellow
+                # Commit and push changes
+                git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
                 git push origin main
                 
                 Write-Host "Changes synced successfully" -ForegroundColor Green
-                
-                # 변경 후 즉시 GitHub 변경사항 확인
-                Check-GitHubChanges
             }
         }
+        
+        # 변경 후 즉시 GitHub 변경사항 확인
+        Check-GitHubChanges
     } catch {
         Write-Host "Error syncing changes: $_" -ForegroundColor Red
     }
