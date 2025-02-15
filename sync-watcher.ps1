@@ -1,4 +1,5 @@
- # Real-time Git Sync Script
+
+# Real-time Git Sync Script
 # PowerShell 스크립트 인코딩 설정
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 [System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8
