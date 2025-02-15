@@ -1,91 +1,91 @@
 
-# PowerShell 스크립트 인코딩 설정
+# PowerShell script encoding settings
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $ErrorActionPreference = "Stop"
 
-# Git 환경 변수 설정
-$env:LANG = "ko_KR.UTF-8"
-$env:LC_ALL = "ko_KR.UTF-8"
+# Git environment variables
+$env:LANG = "en_US.UTF-8"
+$env:LC_ALL = "en_US.UTF-8"
 $env:GIT_COMMITTER_ENCODING = "UTF-8"
 $env:GIT_AUTHOR_ENCODING = "UTF-8"
 
-# 저장소 경로
+# Repository path
 $repoPath = "D:\nCrom_server\xampp8.2\htdocs"
 Set-Location $repoPath
 
-# Git 글로벌 설정
+# Git global settings
 git config --global core.quotepath off
 git config --global i18n.commitencoding utf-8
 git config --global i18n.logoutputencoding utf-8
 git config --global core.precomposeunicode true
 
-# 로그 파일 설정
+# Log file settings
 $logFile = "git-sync.log"
 
 while ($true) {
     try {
-        # Git 저장소 상태 초기화
+        # Initialize Git repository status
         git reset --hard HEAD
         git clean -fd
         git pull origin main --quiet
         
-        # 변경사항 확인 (출력 제한)
+        # Check for changes (limit output)
         $status = git -c advice.statusHints=false status --porcelain
         if ($status) {
-            # 모든 변경사항 스테이징
+            # Stage all changes
             git add .
             
-            # 현재 시간으로 커밋
+            # Create commit with current timestamp
             $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-            $commitMessage = "[자동] $timestamp 에 변경사항 감지"
+            $commitMessage = "[Auto] Changes detected at $timestamp"
             
-            # 커밋 실행 (UTF-8 메시지 사용)
-            $env:GIT_COMMITTER_NAME = "자동 커밋"
+            # Execute commit (using UTF-8)
+            $env:GIT_COMMITTER_NAME = "Auto Commit"
             $env:GIT_COMMITTER_EMAIL = "auto@commit.local"
-            $env:GIT_AUTHOR_NAME = "자동 커밋"
+            $env:GIT_AUTHOR_NAME = "Auto Commit"
             $env:GIT_AUTHOR_EMAIL = "auto@commit.local"
             
             git -c i18n.commitencoding=utf-8 commit -m $commitMessage | Out-Null
             
-            # GitHub로 푸시 (출력 제한)
+            # Push to GitHub (limit output)
             git -c advice.statusHints=false push origin main --force --quiet
             
-            # 로그 파일에 기록
+            # Write to log file
             $message = "====================`n"
-            $message += "시간: $timestamp`n"
-            $message += "상태: 성공`n"
-            $message += "메시지: $commitMessage`n"
+            $message += "Time: $timestamp`n"
+            $message += "Status: Success`n"
+            $message += "Message: $commitMessage`n"
             $message += "====================`n"
             [System.IO.File]::WriteAllText($logFile, $message, [System.Text.Encoding]::UTF8)
             
-            # 콘솔에 출력
+            # Console output
             Write-Output "`n-------------------"
-            Write-Output "시간: $timestamp"
-            Write-Output "상태: 성공"
-            Write-Output "메시지: $commitMessage"
+            Write-Output "Time: $timestamp"
+            Write-Output "Status: Success"
+            Write-Output "Message: $commitMessage"
             Write-Output "-------------------`n"
         }
         
-        # 30초 대기
+        # Wait 30 seconds
         Start-Sleep -Seconds 30
     }
     catch {
         $errorMsg = "====================`n"
-        $errorMsg += "시간: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`n"
-        $errorMsg += "상태: 오류`n"
-        $errorMsg += "메시지: $_`n"
+        $errorMsg += "Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`n"
+        $errorMsg += "Status: Error`n"
+        $errorMsg += "Message: $_`n"
         $errorMsg += "====================`n"
         
-        # 로그 파일에 기록
+        # Write error to log file
         [System.IO.File]::WriteAllText($logFile, $errorMsg, [System.Text.Encoding]::UTF8)
         
-        # 콘솔에 출력
+        # Console output
         Write-Output "`n-------------------"
-        Write-Output "상태: 오류"
-        Write-Output "메시지: $_"
+        Write-Output "Status: Error"
+        Write-Output "Message: $_"
         Write-Output "-------------------`n"
         
         Start-Sleep -Seconds 10
