@@ -47,23 +47,18 @@ function Sync-Changes {
             # Check if there are changes to commit
             $status = git status --porcelain
             if ($status) {
-                $timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
                 # Get the relative path for the commit message
                 $relativePath = (Resolve-Path -Relative $path).TrimStart(".\")
                 
-                # Create a descriptive commit message based on the change type
-                $action = switch ($changeType) {
-                    "Changed" { "Update" }
-                    "Created" { "Add" }
-                    "Deleted" { "Remove" }
-                    "Renamed" { "Rename" }
-                    default { "Modify" }
-                }
+                # Create a simple commit message with only ASCII characters
+                $commitMessage = "Update: $relativePath"
                 
-                $commitMessage = "$action: Changes in $relativePath at $timestamp"
+                # Set environment variables for Git
+                $env:LANG = "en_US.UTF-8"
+                $env:LC_ALL = "en_US.UTF-8"
                 
-                # Commit and push changes
-                git commit -m $commitMessage
+                # Commit and push changes with explicit encoding
+                git -c i18n.commitencoding=utf-8 commit -m $commitMessage
                 git push origin main
                 
                 Write-Host "Changes synced successfully" -ForegroundColor Green
