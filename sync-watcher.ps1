@@ -30,8 +30,8 @@ $watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor [System.IO.Noti
 function Sync-Changes {
     param($changeType, $path)
     try {
-        # Ignore .git directory changes
-        if ($path -like "*.git*") {
+        # Ignore .git directory changes and copy files
+        if ($path -like "*.git*" -or $path -like "*복사본*" -or $path -like "*- 복사본*") {
             return
         }
 
@@ -107,8 +107,8 @@ $action = {
     $path = $Event.SourceEventArgs.FullPath
     $changeType = $Event.SourceEventArgs.ChangeType
     
-    # Ignore node_modules changes
-    if ($path -like "*node_modules*") {
+    # Ignore node_modules changes and copy files
+    if ($path -like "*node_modules*" -or $path -like "*복사본*" -or $path -like "*- 복사본*") {
         return
     }
     
