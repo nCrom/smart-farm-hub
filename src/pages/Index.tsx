@@ -43,12 +43,12 @@ const Index = () => {
             <input type="text" placeholder="검색어를 입력하세요..." className="w-full bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all" />
           </div>
 
-          <div className="w-full max-w-5xl mx-auto">
+          <div className="w-full">
             <Carousel className="relative">
               <CarouselContent>
                 {slideImages.map((image) => (
                   <CarouselItem key={image.id}>
-                    <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl">
+                    <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl">
                       <img
                         src={image.url}
                         alt={image.title}
