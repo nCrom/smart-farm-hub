@@ -48,7 +48,19 @@ function Sync-Changes {
             $status = git status --porcelain
             if ($status) {
                 $timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-                $commitMessage = "Auto sync: $changeType - $timestamp"
+                # Get the relative path for the commit message
+                $relativePath = (Resolve-Path -Relative $path).TrimStart(".\")
+                
+                # Create a descriptive commit message based on the change type
+                $action = switch ($changeType) {
+                    "Changed" { "Update" }
+                    "Created" { "Add" }
+                    "Deleted" { "Remove" }
+                    "Renamed" { "Rename" }
+                    default { "Modify" }
+                }
+                
+                $commitMessage = "$action: Changes in $relativePath at $timestamp"
                 
                 # Commit and push changes
                 git commit -m $commitMessage
