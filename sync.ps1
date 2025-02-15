@@ -99,6 +99,9 @@ try {
         Get-Job | Where-Object { $_.State -eq 'Completed' } | Remove-Job
     }
 }
+catch {
+    Write-Host "오류 발생: $_" -ForegroundColor Red
+}
 finally {
     # 정리
     $handlers | ForEach-Object {
