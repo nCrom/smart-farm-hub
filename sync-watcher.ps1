@@ -3,6 +3,7 @@
 $watchPath = "."
 $filter = "*.*"
 $lastSync = Get-Date
+$lastGitCheck = Get-Date
 
 # 출력 인코딩을 UTF-8로 설정
 $OutputEncoding = [System.Text.Encoding]::UTF8
@@ -15,6 +16,21 @@ $watcher.Path = $watchPath
 $watcher.Filter = $filter
 $watcher.IncludeSubdirectories = $true
 $watcher.EnableRaisingEvents = $true
+
+# GitHub 변경사항 확인 함수
+function Check-GitHubChanges {
+    try {
+        git fetch origin
+        $status = git status
+        if ($status -like "*Your branch is behind*") {
+            Write-Host "GitHub 변경사항 감지. 동기화 중..."
+            git pull origin main --rebase
+            Write-Host "GitHub 동기화 완료"
+        }
+    } catch {
+        Write-Host "GitHub 동기화 중 오류 발생: $_"
+    }
+}
 
 # 변경 이벤트 처리
 $action = {
@@ -38,11 +54,10 @@ $action = {
     }
     
     $script:lastSync = $now
-    Write-Host "변경 감지: $path ($changeType)"
+    Write-Host "로컬 변경 감지: $path ($changeType)"
     
     # Git 명령어 실행
     Start-ThreadJob -ScriptBlock {
-        git pull origin main --rebase
         git add .
         $env:LC_ALL = 'ko_KR.UTF-8'
         $commitMessage = "자동 동기화: $using:changeType - $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))"
@@ -62,6 +77,13 @@ $handlers = . {
 Write-Host "실시간 파일 변경 감지 시작... (종료하려면 Ctrl+C를 누르세요)"
 try {
     do {
+        $now = Get-Date
+        # 2초마다 GitHub 변경사항 확인
+        if (($now - $script:lastGitCheck).TotalSeconds -ge 2) {
+            $script:lastGitCheck = $now
+            Check-GitHubChanges
+        }
+        
         Wait-Event -Timeout 0.1
         # 백그라운드 작업 정리
         Get-Job | Where-Object { $_.State -eq 'Completed' } | Remove-Job
