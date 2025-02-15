@@ -16,6 +16,12 @@ $env:GIT_AUTHOR_ENCODING = "UTF-8"
 $repoPath = "D:\nCrom_server\xampp8.2\htdocs"
 Set-Location $repoPath
 
+# Git 글로벌 설정
+git config --global core.quotepath off
+git config --global i18n.commitencoding utf-8
+git config --global i18n.logoutputencoding utf-8
+git config --global core.precomposeunicode true
+
 # 로그 파일 설정
 $logFile = "git-sync.log"
 
@@ -24,12 +30,6 @@ while ($true) {
         # 변경사항 확인 (출력 제한)
         $status = git -c advice.statusHints=false status --porcelain
         if ($status) {
-            # Git 설정 확인 및 설정
-            git config --global core.quotepath off
-            git config --global i18n.commitencoding utf-8
-            git config --global i18n.logoutputencoding utf-8
-            git config --global core.precomposeunicode true
-            
             # 모든 변경사항 스테이징
             git add .
             
@@ -38,6 +38,11 @@ while ($true) {
             $commitMessage = "[자동] $timestamp 에 변경사항 감지"
             
             # 커밋 실행 (UTF-8 메시지 사용)
+            $env:GIT_COMMITTER_NAME = "자동 커밋"
+            $env:GIT_COMMITTER_EMAIL = "auto@commit.local"
+            $env:GIT_AUTHOR_NAME = "자동 커밋"
+            $env:GIT_AUTHOR_EMAIL = "auto@commit.local"
+            
             git -c i18n.commitencoding=utf-8 commit -m $commitMessage | Out-Null
             
             # GitHub로 푸시 (출력 제한)
@@ -49,14 +54,14 @@ while ($true) {
             $message += "상태: 성공`n"
             $message += "메시지: $commitMessage`n"
             $message += "====================`n"
-            Add-Content -Path $logFile -Value $message -Encoding UTF8
+            [System.IO.File]::WriteAllText($logFile, $message, [System.Text.Encoding]::UTF8)
             
             # 콘솔에 출력
-            Write-Output "-------------------"
+            Write-Output "`n-------------------"
             Write-Output "시간: $timestamp"
             Write-Output "상태: 성공"
             Write-Output "메시지: $commitMessage"
-            Write-Output "-------------------"
+            Write-Output "-------------------`n"
         }
         
         # 30초 대기
@@ -70,13 +75,13 @@ while ($true) {
         $errorMsg += "====================`n"
         
         # 로그 파일에 기록
-        Add-Content -Path $logFile -Value $errorMsg -Encoding UTF8
+        [System.IO.File]::WriteAllText($logFile, $errorMsg, [System.Text.Encoding]::UTF8)
         
         # 콘솔에 출력
-        Write-Output "-------------------"
+        Write-Output "`n-------------------"
         Write-Output "상태: 오류"
         Write-Output "메시지: $_"
-        Write-Output "-------------------"
+        Write-Output "-------------------`n"
         
         Start-Sleep -Seconds 10
     }
