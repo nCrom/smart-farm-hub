@@ -4,12 +4,6 @@ $env:LC_ALL = 'ko_KR.UTF-8'
 $env:LANG = 'ko_KR.UTF-8'
 [Console]::InputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# Git 인코딩 설정
-git config --global core.quotepath off
-git config --global i18n.commitencoding utf-8
-git config --global i18n.logoutputencoding utf-8
-git config --global core.precomposeunicode true
-
 $ErrorActionPreference = "Stop"
 
 # 저장소 경로
@@ -27,8 +21,13 @@ while ($true) {
             # 현재 시간으로 커밋
             $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
             $commitMsg = "자동 커밋: $timestamp"
-            $commitMsg | Out-File -FilePath "$env:TEMP\commit_msg.txt" -Encoding utf8
-            git commit -F "$env:TEMP\commit_msg.txt"
+            
+            # UTF-8 without BOM으로 커밋 메시지 저장
+            $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+            [System.IO.File]::WriteAllLines("$env:TEMP\commit_msg.txt", @($commitMsg), $utf8NoBom)
+            
+            # 커밋 실행
+            git -c i18n.commitencoding=utf-8 commit -F "$env:TEMP\commit_msg.txt"
             Remove-Item "$env:TEMP\commit_msg.txt"
             
             # GitHub로 푸시
