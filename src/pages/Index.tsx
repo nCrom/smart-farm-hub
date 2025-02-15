@@ -72,11 +72,11 @@ const Index = () => {
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 h-14 w-14 rounded-full bg-white/70 hover:bg-white/90 border-none">
-                <ArrowLeft className="h-10 w-10" strokeWidth={2.5} />
+              <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 h-14 w-14 text-white hover:text-white/80 transition-colors border-none">
+                <ArrowLeft className="h-14 w-14" strokeWidth={1.5} />
               </CarouselPrevious>
-              <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 h-14 w-14 rounded-full bg-white/70 hover:bg-white/90 border-none">
-                <ArrowRight className="h-10 w-10" strokeWidth={2.5} />
+              <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 h-14 w-14 text-white hover:text-white/80 transition-colors border-none">
+                <ArrowRight className="h-14 w-14" strokeWidth={1.5} />
               </CarouselNext>
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
                 {slideImages.map((_, index) => (
