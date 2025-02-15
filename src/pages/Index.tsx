@@ -77,11 +77,11 @@ const Index = () => {
                   width="48"
                   height="48"
                   stroke="currentColor"
-                  strokeWidth="2"
+                  strokeWidth="3"
                   fill="none"
                   className="rounded-full"
                 >
-                  <path d="M15 4L7 12L15 20" strokeLinecap="round" strokeLinejoin="round" />
+                  <polyline points="15,4 7,12 15,20" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </CarouselPrevious>
               <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors !bg-transparent !border-none !shadow-none !p-0 !m-0 scale-[2.5]">
@@ -90,11 +90,11 @@ const Index = () => {
                   width="48"
                   height="48"
                   stroke="currentColor"
-                  strokeWidth="2"
+                  strokeWidth="3"
                   fill="none"
                   className="rounded-full"
                 >
-                  <path d="M9 4L17 12L9 20" strokeLinecap="round" strokeLinejoin="round" />
+                  <polyline points="9,4 17,12 9,20" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </CarouselNext>
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
