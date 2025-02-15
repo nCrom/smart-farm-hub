@@ -17,8 +17,8 @@ export function DeviceOverview() {
             <div className={`p-3 rounded-full bg-gray-50 ${device.color}`}>
               <device.icon className="w-6 h-6" />
             </div>
-            <div>
-              <p className="text-sm text-gray-500">{device.name}</p>
+            <div className="flex flex-col">
+              <p className="text-sm text-gray-500 mb-1">{device.name}</p>
               <p className="text-2xl font-bold">{device.value}</p>
             </div>
           </div>
