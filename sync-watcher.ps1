@@ -132,6 +132,11 @@ $handlers = . {
 Write-Host "Real-time file monitoring started. Press Ctrl+C to stop." -ForegroundColor Green
 
 try {
+    # 스크립트 시작 시 git reset 실행
+    Write-Host "Resetting git state..." -ForegroundColor Yellow
+    git reset --hard origin/main
+    git clean -fd
+    
     # 이벤트 대기
     while ($true) {
         Wait-Event -Timeout 1
