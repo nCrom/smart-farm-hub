@@ -1,6 +1,15 @@
 # GitHub Desktop 자동 커밋 스크립트
-$OutputEncoding = [System.Text.Encoding]::UTF8
-[System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$env:LC_ALL = 'ko_KR.UTF-8'
+$env:LANG = 'ko_KR.UTF-8'
+[Console]::InputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+# Git 인코딩 설정
+git config --global core.quotepath off
+git config --global i18n.commitencoding utf-8
+git config --global i18n.logoutputencoding utf-8
+git config --global core.precomposeunicode true
+
 $ErrorActionPreference = "Stop"
 
 # 저장소 경로
@@ -17,7 +26,10 @@ while ($true) {
             
             # 현재 시간으로 커밋
             $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-            git commit -m "자동 커밋: $timestamp"
+            $commitMsg = "자동 커밋: $timestamp"
+            $commitMsg | Out-File -FilePath "$env:TEMP\commit_msg.txt" -Encoding utf8
+            git commit -F "$env:TEMP\commit_msg.txt"
+            Remove-Item "$env:TEMP\commit_msg.txt"
             
             # GitHub로 푸시
             git push origin main
