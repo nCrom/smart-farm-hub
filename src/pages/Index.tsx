@@ -2,7 +2,7 @@
 import { Header } from "../components/layout/Header";
 import { WeatherCard } from "../components/dashboard/WeatherCard";
 import { DeviceOverview } from "../components/dashboard/DeviceOverview";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ArrowLeft, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import {
   Carousel,
@@ -77,10 +77,10 @@ const Index = () => {
                 ))}
               </CarouselContent>
               <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 bg-white/70 hover:bg-white/90 border-none">
-                <ChevronLeft className="h-9 w-9" />
+                <ArrowLeft className="h-9 w-9" strokeWidth={1} />
               </CarouselPrevious>
               <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 bg-white/70 hover:bg-white/90 border-none">
-                <ChevronRight className="h-9 w-9" />
+                <ArrowRight className="h-9 w-9" strokeWidth={1} />
               </CarouselNext>
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
                 {slideImages.map((_, index) => (
