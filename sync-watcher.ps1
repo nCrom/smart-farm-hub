@@ -56,44 +56,47 @@ function Sync-Changes {
             $gitStatus = git status --porcelain "$path"
             Write-Host "Git status for $path : $gitStatus" -ForegroundColor Cyan
             
-            # 강제로 git add 실행 (-f 옵션 사용)
+            # 현재 브랜치의 변경사항을 커밋
             git add -f "$path"
+            git commit -m "Update: $((Split-Path $path -Leaf))"
             
-            $status = git status --porcelain
-            if ($status) {
-                $relativePath = (Resolve-Path -Relative $path).TrimStart(".\")
-                $commitMessage = "Update: $relativePath"
-                
-                Write-Host "Committing changes..." -ForegroundColor Yellow
-                git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
-                
-                Write-Host "Pushing changes..." -ForegroundColor Yellow
-                # 원격 변경사항 먼저 가져오고 로컬 변경사항 푸시
-                git fetch origin
-                git pull origin main --rebase
-                git push origin main -f
-                
-                Write-Host "Changes synced successfully" -ForegroundColor Green
+            # 원격 저장소의 변경사항 가져와서 리베이스
+            Write-Host "Fetching and rebasing with remote..." -ForegroundColor Yellow
+            git fetch origin
+            git rebase origin/main
+            
+            # 충돌이 있는지 확인
+            $conflicts = git diff --name-only --diff-filter=U
+            if ($conflicts) {
+                Write-Host "Conflicts detected. Resolving..." -ForegroundColor Yellow
+                git checkout --theirs "$path"
+                git add "$path"
+                git rebase --continue
             }
+            
+            # 변경사항 푸시
+            Write-Host "Pushing changes..." -ForegroundColor Yellow
+            git push origin main
+            
+            Write-Host "Changes synced successfully" -ForegroundColor Green
         }
         elseif ($changeType -eq "Deleted") {
             Write-Host "File deleted: $path" -ForegroundColor Yellow
+            
+            # 파일 삭제를 커밋
             git rm -f "$path"
+            git commit -m "Delete: $((Split-Path $path -Leaf))"
             
-            $commitMessage = "Delete: $((Split-Path $path -Leaf))"
-            git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
-            
-            # 원격 변경사항 먼저 가져오고 로컬 변경사항 푸시
+            # 원격 저장소와 동기화
+            Write-Host "Syncing with remote..." -ForegroundColor Yellow
             git fetch origin
-            git pull origin main --rebase
-            git push origin main -f
+            git rebase origin/main
+            git push origin main
             
-            Write-Host "File deletion synced to GitHub" -ForegroundColor Green
+            Write-Host "Deletion synced successfully" -ForegroundColor Green
         }
     } catch {
         Write-Host "Error syncing changes: $_" -ForegroundColor Red
-        
-        # 에러 발생 시 git 상태 출력
         Write-Host "Git Status:" -ForegroundColor Yellow
         git status
     }
@@ -129,10 +132,6 @@ $handlers = . {
 Write-Host "Real-time file monitoring started. Press Ctrl+C to stop." -ForegroundColor Green
 
 try {
-    # 초기 Git 상태 확인 및 최신 변경사항 가져오기
-    Write-Host "Performing initial git pull..." -ForegroundColor Cyan
-    git pull origin main --rebase
-    
     # 이벤트 대기
     while ($true) {
         Wait-Event -Timeout 1
