@@ -15,6 +15,8 @@ git config --global core.autocrlf false
 
 $watchPath = Resolve-Path "."
 $filter = "*.*"
+$lastSync = Get-Date
+$lastGitCheck = Get-Date
 
 Write-Host "Starting Git sync watcher in: $watchPath"
 
@@ -26,12 +28,27 @@ $watcher.IncludeSubdirectories = $true
 $watcher.EnableRaisingEvents = $true
 $watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor [System.IO.NotifyFilters]::LastWrite -bor [System.IO.NotifyFilters]::Size -bor [System.IO.NotifyFilters]::CreationTime
 
+# Check GitHub changes function
+function Check-GitHubChanges {
+    try {
+        git fetch origin
+        $status = git status
+        if ($status -like "*Your branch is behind*") {
+            Write-Host "GitHub changes detected. Syncing..." -ForegroundColor Yellow
+            git pull origin main --rebase
+            Write-Host "GitHub sync completed" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "Error during GitHub sync: $_" -ForegroundColor Red
+    }
+}
+
 # Sync changes function
 function Sync-Changes {
     param($changeType, $path)
     try {
-        # Ignore .git directory changes and copy files
-        if ($path -like "*.git*" -or $path -like "*복사본*" -or $path -like "*- 복사본*") {
+        # Ignore .git directory changes
+        if ($path -like "*.git*") {
             return
         }
 
@@ -51,36 +68,36 @@ function Sync-Changes {
         # 변경 사항을 즉시 커밋하고 푸시
         if (Test-Path $path) {
             Write-Host "Adding changes..." -ForegroundColor Yellow
+            git add "$path"
             
-            # 먼저 untracked 파일인지 확인
-            $gitStatus = git status --porcelain "$path"
-            Write-Host "Git status for $path : $gitStatus" -ForegroundColor Cyan
-            
-            # 현재 브랜치의 변경사항을 커밋
-            git add -f "$path"
-            git commit -m "Update: $((Split-Path $path -Leaf))"
-            
-            # 강제 푸시 (원격 저장소의 변경사항 무시)
-            Write-Host "Force pushing changes..." -ForegroundColor Yellow
-            git push -f origin main
-            
-            Write-Host "Changes synced successfully" -ForegroundColor Green
+            $status = git status --porcelain
+            if ($status) {
+                $relativePath = (Resolve-Path -Relative $path).TrimStart(".\")
+                $commitMessage = "Update: $relativePath"
+                
+                Write-Host "Committing changes..." -ForegroundColor Yellow
+                git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
+                
+                Write-Host "Pushing changes..." -ForegroundColor Yellow
+                git push origin main
+                
+                Write-Host "Changes synced successfully" -ForegroundColor Green
+            }
         }
         elseif ($changeType -eq "Deleted") {
             Write-Host "File deleted: $path" -ForegroundColor Yellow
+            git rm "$path"
             
-            # 파일 삭제를 커밋
-            git rm -f "$path"
-            git commit -m "Delete: $((Split-Path $path -Leaf))"
+            $commitMessage = "Delete: $((Split-Path $path -Leaf))"
+            git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
+            git push origin main
             
-            # 강제 푸시
-            Write-Host "Force pushing deletion..." -ForegroundColor Yellow
-            git push -f origin main
-            
-            Write-Host "Deletion synced successfully" -ForegroundColor Green
+            Write-Host "File deletion synced to GitHub" -ForegroundColor Green
         }
     } catch {
         Write-Host "Error syncing changes: $_" -ForegroundColor Red
+        
+        # 에러 발생 시 git 상태 출력
         Write-Host "Git Status:" -ForegroundColor Yellow
         git status
     }
@@ -91,8 +108,8 @@ $action = {
     $path = $Event.SourceEventArgs.FullPath
     $changeType = $Event.SourceEventArgs.ChangeType
     
-    # Ignore node_modules changes and copy files
-    if ($path -like "*node_modules*" -or $path -like "*복사본*" -or $path -like "*- 복사본*") {
+    # Ignore node_modules changes
+    if ($path -like "*node_modules*") {
         return
     }
     
@@ -116,17 +133,13 @@ $handlers = . {
 Write-Host "Real-time file monitoring started. Press Ctrl+C to stop." -ForegroundColor Green
 
 try {
-    # 스크립트 시작 시 강제로 원격 저장소 상태로 초기화
-    Write-Host "Resetting to remote state..." -ForegroundColor Yellow
-    git fetch origin
-    git reset --hard origin/main
-    git clean -fd
+    # Initial sync check
+    Check-GitHubChanges
     
-    # 이벤트 대기
-    while ($true) {
+    do {
         Wait-Event -Timeout 1
         Get-Job | Where-Object { $_.State -eq 'Completed' } | Remove-Job
-    }
+    } while ($true)
 } finally {
     # Cleanup
     $handlers | ForEach-Object {
