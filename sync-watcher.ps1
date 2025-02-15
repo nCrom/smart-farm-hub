@@ -1,7 +1,9 @@
 # Real-time Git Sync Script
+# PowerShell 기본 인코딩 설정
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 [System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
+chcp 65001 | Out-Null
 
 # Git 설정을 스크립트 실행 시점에 강제로 적용
 git config --global core.quotepath off
@@ -72,12 +74,12 @@ function Sync-Changes {
                 $OutputEncoding = [System.Text.Encoding]::UTF8
                 
                 # 커밋 실행 (UTF-8 인코딩 강제 적용)
+                Write-Host "Committing changes..." -ForegroundColor Yellow
                 $commitCommand = "git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m `"$commitMessage`""
-                $commitBytes = [System.Text.Encoding]::UTF8.GetBytes($commitCommand)
-                $commitString = [System.Text.Encoding]::UTF8.GetString($commitBytes)
-                Invoke-Expression $commitString
+                Invoke-Expression $commitCommand
                 
                 # 변경사항 푸시
+                Write-Host "Pushing changes..." -ForegroundColor Yellow
                 git push origin main
                 
                 Write-Host "Changes synced successfully" -ForegroundColor Green
