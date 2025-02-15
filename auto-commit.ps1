@@ -27,6 +27,11 @@ $logFile = "git-sync.log"
 
 while ($true) {
     try {
+        # Git 저장소 상태 초기화
+        git reset --hard HEAD
+        git clean -fd
+        git pull origin main --quiet
+        
         # 변경사항 확인 (출력 제한)
         $status = git -c advice.statusHints=false status --porcelain
         if ($status) {
@@ -46,7 +51,7 @@ while ($true) {
             git -c i18n.commitencoding=utf-8 commit -m $commitMessage | Out-Null
             
             # GitHub로 푸시 (출력 제한)
-            git -c advice.statusHints=false push origin main --quiet
+            git -c advice.statusHints=false push origin main --force --quiet
             
             # 로그 파일에 기록
             $message = "====================`n"
