@@ -30,7 +30,7 @@ $watcher.IncludeSubdirectories = $true
 $watcher.EnableRaisingEvents = $true
 
 # Check GitHub changes function
-function Check-GitHubChanges {
+function Check-GitHubChanges  {
     try {
         git fetch origin
         $status = git status
