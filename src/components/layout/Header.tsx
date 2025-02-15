@@ -1,16 +1,16 @@
 
-import { Bell, Search, User, Menu, X, Home, Settings, Sprout, BarChart3, Users, ShoppingBag, BookOpen, MessageSquare } from "lucide-react";
+import { Bell, Search, User, Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const menuItems = [
-  { icon: Home, label: "대시보드", path: "/" },
-  { icon: Sprout, label: "디바이스 관리", path: "/devices" },
-  { icon: BarChart3, label: "데이터 분석", path: "/analytics" },
-  { icon: Users, label: "커뮤니티", path: "/community" },
-  { icon: BookOpen, label: "교육 자료", path: "/education" },
-  { icon: ShoppingBag, label: "스마트팜 마켓", path: "/market" },
-  { icon: MessageSquare, label: "문의하기", path: "/support" },
-  { icon: Settings, label: "설정", path: "/settings" },
+  { label: "대시보드", path: "/" },
+  { label: "디바이스 관리", path: "/devices" },
+  { label: "데이터 분석", path: "/analytics" },
+  { label: "커뮤니티", path: "/community" },
+  { label: "교육 자료", path: "/education" },
+  { label: "스마트팜 마켓", path: "/market" },
+  { label: "문의하기", path: "/support" },
+  { label: "설정", path: "/settings" },
 ];
 
 interface HeaderProps {
@@ -33,7 +33,6 @@ export function Header({ isMenuOpen, onMenuOpenChange }: HeaderProps) {
                     to={item.path}
                     className="flex items-center gap-2 px-3 py-2 text-gray-700 rounded-lg hover:bg-primary-50 hover:text-primary-600 transition-all"
                   >
-                    <item.icon className="w-4 h-4" />
                     <span className="text-sm font-medium">{item.label}</span>
                   </Link>
                 ))}
@@ -87,7 +86,6 @@ export function Header({ isMenuOpen, onMenuOpenChange }: HeaderProps) {
                   onClick={() => onMenuOpenChange(false)}
                   className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-all rounded-lg"
                 >
-                  <item.icon className="w-5 h-5" />
                   <span className="font-medium">{item.label}</span>
                 </Link>
               ))}
