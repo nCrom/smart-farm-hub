@@ -2,11 +2,10 @@
 # Git 실시간 동기화 스크립트
 $ErrorActionPreference = "Stop"
 
-# 인코딩 설정
+# Windows 11 인코딩 설정
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
-chcp 65001 | Out-Null
 
 # Git 설정
 git config --global core.quotepath off
@@ -36,8 +35,8 @@ function Sync-Changes {
 
     try {
         # Git 환경변수 설정
-        $env:LANG = "en_US.UTF-8"
-        $env:LC_ALL = "en_US.UTF-8"
+        $env:LANG = "ko_KR.UTF-8"
+        $env:LC_ALL = "ko_KR.UTF-8"
 
         # 파일 존재 여부에 따른 처리
         if (Test-Path $fullPath) {
