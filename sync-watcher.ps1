@@ -1,3 +1,4 @@
+
 # 실시간 Git 동기화 스크립트
 $watchPath = "."
 $filter = "*.*"
