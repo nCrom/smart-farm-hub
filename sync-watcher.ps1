@@ -24,7 +24,7 @@ $watcher.Path = $watchPath
 $watcher.Filter = $filter
 $watcher.IncludeSubdirectories = $true
 $watcher.EnableRaisingEvents = $true
-$watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor [System.IO.NotifyFilters]::LastWrite
+$watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor [System.IO.NotifyFilters]::LastWrite -bor [System.IO.NotifyFilters]::Size -bor [System.IO.NotifyFilters]::CreationTime
 
 # Check GitHub changes function
 function Check-GitHubChanges {
@@ -71,6 +71,9 @@ function Sync-Changes {
                 git push origin main
                 
                 Write-Host "Changes synced successfully" -ForegroundColor Green
+                
+                # 변경 후 즉시 GitHub 변경사항 확인
+                Check-GitHubChanges
             }
         }
     } catch {
@@ -94,8 +97,8 @@ $action = {
         return
     }
     
-    # Check if enough time has passed since last sync
-    if (($now - $script:lastSync).TotalMilliseconds -lt 500) {
+    # 딜레이를 100ms로 줄임
+    if (($now - $script:lastSync).TotalMilliseconds -lt 100) {
         return
     }
     
@@ -119,8 +122,8 @@ try {
     
     do {
         $now = Get-Date
-        # Check GitHub changes every 2 seconds
-        if (($now - $script:lastGitCheck).TotalSeconds -ge 2) {
+        # GitHub 변경사항 체크 주기를 1초로 줄임
+        if (($now - $script:lastGitCheck).TotalSeconds -ge 1) {
             $script:lastGitCheck = $now
             Check-GitHubChanges
         }
