@@ -79,8 +79,10 @@ function Sync-Changes {
         }
         # 파일이 생성되거나 수정된 경우
         elseif (($changeType -eq "Created" -or $changeType -eq "Changed") -and (Test-Path $path)) {
-            # Add all changes
-            git add .
+            Write-Host "Adding changes..." -ForegroundColor Yellow
+            
+            # 변경된 파일만 추가
+            git add "$path"
             
             # Check if there are changes to commit
             $status = git status --porcelain
@@ -89,16 +91,16 @@ function Sync-Changes {
                 $relativePath = (Resolve-Path -Relative $path).TrimStart(".\")
                 $commitMessage = "Update: $relativePath"
                 
-                # Commit and push changes
+                # Commit and push changes with UTF-8 encoding
+                Write-Host "Committing changes..." -ForegroundColor Yellow
                 git -c i18n.commitencoding=utf-8 -c i18n.logoutputencoding=utf-8 commit -m $commitMessage
+                
+                Write-Host "Pushing changes..." -ForegroundColor Yellow
                 git push origin main
                 
                 Write-Host "Changes synced successfully" -ForegroundColor Green
             }
         }
-        
-        # 변경 후 즉시 GitHub 변경사항 확인
-        Check-GitHubChanges
     } catch {
         Write-Host "Error syncing changes: $_" -ForegroundColor Red
     }
