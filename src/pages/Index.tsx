@@ -10,6 +10,7 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
+  type CarouselApi,
 } from "../components/ui/carousel";
 
 const slideImages = [
@@ -33,6 +34,13 @@ const slideImages = [
 const Index = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [api, setApi] = useState<CarouselApi>();
+
+  // 현재 슬라이드 변경 감지
+  const onSelect = () => {
+    if (!api) return;
+    setCurrentSlide(api.selectedScrollSnap());
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-100 via-blue-50 to-orange-50">
@@ -45,7 +53,11 @@ const Index = () => {
           </div>
 
           <div className="w-full">
-            <Carousel className="relative" onSelect={(api) => setCurrentSlide(api.selectedScrollSnap())}>
+            <Carousel
+              setApi={setApi}
+              className="relative"
+              onSelect={onSelect}
+            >
               <CarouselContent>
                 {slideImages.map((image) => (
                   <CarouselItem key={image.id}>
