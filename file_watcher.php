@@ -6,7 +6,7 @@
 $log_file = 'git_sync.log';
 
 // 환경 설정
-$repo_path = 'D:/nCrom_server/xampp8.2/htdocs';  // htdocs 폴더가 맞는지 확인
+$repo_path = 'D:/nCrom_server/xampp8.2/htdocs';
 $branch = 'main';
 $commit_message = '자동 커밋: 파일 시스템 변경 감지';
 
@@ -42,10 +42,21 @@ function gitPull() {
         writeLog("Git Pull 실패: 다른 Git 작업이 실행 중입니다");
         return false;
     }
+    
+    // stash 생성
+    $stash_output = shell_exec("cd $repo_path && git stash 2>&1");
+    writeLog("Git Stash 결과: $stash_output");
+    
+    // pull 수행
     writeLog("Git Pull 시작");
-    $output = shell_exec("cd $repo_path && git pull origin main 2>&1");
-    writeLog("Git Pull 결과: $output");
-    return $output;
+    $pull_output = shell_exec("cd $repo_path && git pull origin main 2>&1");
+    writeLog("Git Pull 결과: $pull_output");
+    
+    // stash 적용
+    $stash_pop_output = shell_exec("cd $repo_path && git stash pop 2>&1");
+    writeLog("Git Stash Pop 결과: $stash_pop_output");
+    
+    return true;
 }
 
 // Git 커밋 및 푸시
@@ -86,6 +97,13 @@ function gitCommitAndPush() {
     
     // 푸시 전에 다시 한번 pull
     gitPull();
+    
+    // 충돌이 없는지 확인
+    $conflict_check = shell_exec("cd $repo_path && git diff --check 2>&1");
+    if (!empty($conflict_check)) {
+        writeLog("충돌 발생: $conflict_check");
+        return false;
+    }
     
     // 푸시
     $push_output = shell_exec("cd $repo_path && git push origin $branch 2>&1");
