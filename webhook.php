@@ -9,6 +9,12 @@ function writeLog($message) {
     file_put_contents($log_file, "[$timestamp] $message\n", FILE_APPEND);
 }
 
+// 디버깅을 위한 파일 권한 및 디렉토리 체크
+$current_dir = dirname(__FILE__);
+writeLog("현재 디렉토리: " . $current_dir);
+writeLog("PHP 실행 사용자: " . get_current_user());
+writeLog("디렉토리 쓰기 권한: " . (is_writable($current_dir) ? "있음" : "없음"));
+
 // 암호화 키 설정 (실제 운영 환경에서는 이 키를 안전한 곳에 보관해야 합니다)
 define('ENCRYPTION_KEY', 'your-secure-encryption-key-here');
 
@@ -29,14 +35,27 @@ function decrypt($data) {
 }
 
 // GitHub 토큰 설정 및 암호화
-$token_file = 'github_token.enc';
+$token_file = $current_dir . '/github_token.enc';
+writeLog("토큰 파일 경로: " . $token_file);
+writeLog("토큰 파일 존재 여부: " . (file_exists($token_file) ? "존재함" : "존재하지 않음"));
+
 if (!file_exists($token_file)) {
-    $token = 'your_github_token_here'; // 여기에 GitHub 토큰을 입력하세요
-    $encrypted_token = encrypt($token);
-    // 파일 권한을 600으로 설정 (소유자만 읽기/쓰기 가능)
-    file_put_contents($token_file, $encrypted_token);
-    chmod($token_file, 0600);
-    writeLog("암호화된 GitHub 토큰 파일이 생성되었습니다.");
+    try {
+        $token = 'your_github_token_here'; // 여기에 GitHub 토큰을 입력하세요
+        $encrypted_token = encrypt($token);
+        
+        // 파일 생성 시도
+        $result = file_put_contents($token_file, $encrypted_token);
+        if ($result === false) {
+            writeLog("오류: 파일 생성 실패");
+            writeLog("PHP 오류: " . error_get_last()['message']);
+        } else {
+            chmod($token_file, 0600);
+            writeLog("암호화된 GitHub 토큰 파일이 생성되었습니다.");
+        }
+    } catch (Exception $e) {
+        writeLog("예외 발생: " . $e->getMessage());
+    }
 }
 
 // GitHub API 설정
