@@ -42,7 +42,9 @@ export function Header({
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-8">
-              <h1 className="text-xl font-bold text-primary-600">스마트 파밍</h1>
+              <Link to="/" className="text-xl font-bold text-primary-600 hover:text-primary-700 transition-colors">
+                스마트 파밍
+              </Link>
               <div className="hidden md:flex items-center gap-4">
                 {menuItems.map(item => <Link key={item.path} to={item.path} className="flex items-center gap-2 px-3 py-2 text-gray-700 rounded-lg hover:bg-primary-50 hover:text-primary-600 transition-all">
                     <span className="text-sm font-medium">{item.label}</span>
