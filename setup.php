@@ -27,6 +27,19 @@ if (!is_dir("$repo_path/.git")) {
 $remote_url = "https://{$github_token}@github.com/nCrom/smart-farm-hub.git";
 shell_exec("cd $repo_path && git remote set-url origin {$remote_url}");
 
+// Git 설정 확인
+echo "Git 설정 확인 중...\n";
+echo shell_exec("cd $repo_path && git config --list") . "\n";
+
+// 원격 저장소 연결 테스트
+echo "원격 저장소 연결 테스트 중...\n";
+$test_result = shell_exec("cd $repo_path && git ls-remote 2>&1");
+if (strpos($test_result, 'fatal') === false) {
+    echo "원격 저장소 연결 성공!\n";
+} else {
+    echo "원격 저장소 연결 실패: $test_result\n";
+}
+
 echo "Git 설정이 완료되었습니다.\n";
 echo "저장소 경로: $repo_path\n";
 echo "원격 저장소가 설정되었습니다.\n";
