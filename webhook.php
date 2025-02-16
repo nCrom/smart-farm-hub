@@ -1,4 +1,3 @@
-
 <?php
 // 로그 파일 설정
 $log_file = 'webhook.log';
@@ -10,33 +9,56 @@ function writeLog($message) {
 }
 
 // GitHub API 설정
-$github_token = '여기에_깃허브_토큰을_입력하세요'; // GitHub 개인 액세스 토큰 설정
+$github_token = file_exists('github_token.txt') ? trim(file_get_contents('github_token.txt')) : '';
 $owner = 'nCrom';
 $repo = 'smart-farm-hub';
 
 // ngrok API를 통해 현재 터널 URL 가져오기
 function getNgrokUrl() {
     $ngrok_api = "http://127.0.0.1:4040/api/tunnels";
+    writeLog("ngrok API 요청: $ngrok_api");
+    
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $ngrok_api);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     $response = curl_exec($ch);
+    
+    if (curl_errno($ch)) {
+        writeLog("ngrok API 오류: " . curl_error($ch));
+        curl_close($ch);
+        return null;
+    }
+    
     curl_close($ch);
+    writeLog("ngrok API 응답: " . $response);
 
     if ($response) {
         $tunnels = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            writeLog("JSON 파싱 오류: " . json_last_error_msg());
+            return null;
+        }
+        
         foreach ($tunnels['tunnels'] as $tunnel) {
             if ($tunnel['proto'] === 'https') {
+                writeLog("ngrok URL 찾음: " . $tunnel['public_url']);
                 return $tunnel['public_url'];
             }
         }
     }
+    
+    writeLog("ngrok URL을 찾을 수 없음");
     return null;
 }
 
 // GitHub Webhook URL 업데이트
 function updateGithubWebhook($ngrok_url) {
     global $github_token, $owner, $repo;
+    
+    if (empty($github_token)) {
+        writeLog("GitHub 토큰이 설정되지 않았습니다");
+        return false;
+    }
     
     // webhook ID를 저장할 파일
     $webhook_id_file = 'webhook_id.txt';
@@ -56,6 +78,8 @@ function updateGithubWebhook($ngrok_url) {
         'active' => true
     );
 
+    writeLog("webhook 데이터: " . json_encode($webhook_data));
+
     // 기존 webhook ID 확인
     $webhook_id = file_exists($webhook_id_file) ? file_get_contents($webhook_id_file) : null;
 
@@ -69,10 +93,12 @@ function updateGithubWebhook($ngrok_url) {
 
     if ($webhook_id) {
         // 기존 webhook 업데이트
+        writeLog("기존 webhook 업데이트 (ID: $webhook_id)");
         curl_setopt($ch, CURLOPT_URL, "$api_url/$webhook_id");
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PATCH");
     } else {
         // 새 webhook 생성
+        writeLog("새 webhook 생성");
         curl_setopt($ch, CURLOPT_URL, $api_url);
         curl_setopt($ch, CURLOPT_POST, true);
     }
@@ -80,13 +106,23 @@ function updateGithubWebhook($ngrok_url) {
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($webhook_data));
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    
+    if (curl_errno($ch)) {
+        writeLog("CURL 오류: " . curl_error($ch));
+        curl_close($ch);
+        return false;
+    }
+    
     curl_close($ch);
+    writeLog("GitHub API 응답 코드: $http_code");
+    writeLog("GitHub API 응답: $response");
 
     if ($http_code >= 200 && $http_code < 300) {
         $result = json_decode($response, true);
         if (!$webhook_id && isset($result['id'])) {
             // 새로 생성된 webhook ID 저장
             file_put_contents($webhook_id_file, $result['id']);
+            writeLog("새 webhook ID 저장됨: " . $result['id']);
         }
         writeLog("Webhook URL 업데이트 성공: " . $ngrok_url);
         return true;
@@ -96,10 +132,17 @@ function updateGithubWebhook($ngrok_url) {
     return false;
 }
 
-// ngrok URL 확인 및 업데이트
+// 스크립트 시작 시 ngrok URL 확인 및 업데이트
 $ngrok_url = getNgrokUrl();
 if ($ngrok_url) {
-    updateGithubWebhook($ngrok_url);
+    writeLog("ngrok URL 발견: $ngrok_url");
+    if (updateGithubWebhook($ngrok_url)) {
+        writeLog("GitHub webhook 업데이트 완료");
+    } else {
+        writeLog("GitHub webhook 업데이트 실패");
+    }
+} else {
+    writeLog("ngrok URL을 찾을 수 없음");
 }
 
 // 클라이언트와의 연결을 즉시 종료하고 백그라운드에서 처리
