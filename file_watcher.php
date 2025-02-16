@@ -110,6 +110,17 @@ function gitCommitAndPush() {
         shell_exec("cd $repo_path && git remote set-url origin {$remote_url}");
         writeLog("원격 저장소 URL 업데이트됨");
         
+        // index.lock 파일이 있다면 제거
+        $lock_file = "$repo_path/.git/index.lock";
+        if (file_exists($lock_file)) {
+            @unlink($lock_file);
+            writeLog("Git index.lock 파일 제거됨");
+        }
+        
+        // 먼저 pull 수행
+        $pull_output = shell_exec("cd $repo_path && git pull origin $branch 2>&1");
+        writeLog("Git Pull 결과: " . trim($pull_output));
+        
         // 변경사항 스테이징
         $add_output = shell_exec("cd $repo_path && git add -A 2>&1");
         writeLog("Git Add 결과: " . trim($add_output));
@@ -118,17 +129,22 @@ function gitCommitAndPush() {
         $status_output = shell_exec("cd $repo_path && git status 2>&1");
         writeLog("커밋 전 상태: " . trim($status_output));
         
-        // 커밋
-        $commit_output = shell_exec("cd $repo_path && git commit -m \"$commit_message\" 2>&1");
-        writeLog("Git Commit 결과: " . trim($commit_output));
-        
-        // 푸시 전 원격 저장소 상태 확인
-        $remote_status = shell_exec("cd $repo_path && git remote -v 2>&1");
-        writeLog("원격 저장소 상태: " . trim($remote_status));
-        
-        // 푸시
-        $push_output = shell_exec("cd $repo_path && git push origin $branch 2>&1");
-        writeLog("Git Push 결과: " . trim($push_output));
+        // 커밋할 변경사항이 있는지 확인
+        if (strpos($status_output, "nothing to commit") === false) {
+            // 커밋
+            $commit_output = shell_exec("cd $repo_path && git commit -m \"$commit_message\" 2>&1");
+            writeLog("Git Commit 결과: " . trim($commit_output));
+            
+            // 푸시 전 원격 저장소 상태 확인
+            $remote_status = shell_exec("cd $repo_path && git remote -v 2>&1");
+            writeLog("원격 저장소 상태: " . trim($remote_status));
+            
+            // 푸시
+            $push_output = shell_exec("cd $repo_path && git push origin $branch 2>&1");
+            writeLog("Git Push 결과: " . trim($push_output));
+        } else {
+            writeLog("커밋할 변경사항 없음");
+        }
         
         releaseLock();
         return true;
