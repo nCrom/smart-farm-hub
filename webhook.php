@@ -1,3 +1,4 @@
+
 <?php
 // 로그 파일 설정
 $log_file = 'webhook.log';
@@ -7,6 +8,11 @@ function writeLog($message) {
     $timestamp = date('Y-m-d H:i:s');
     file_put_contents($log_file, "[$timestamp] $message\n", FILE_APPEND);
 }
+
+// GitHub 토큰 설정
+$token = 'your_github_token_here'; // 여기에 GitHub 토큰을 입력하세요
+file_put_contents('github_token.txt', $token);
+writeLog("GitHub 토큰이 설정되었습니다.");
 
 // GitHub API 설정
 $github_token = file_exists('github_token.txt') ? trim(file_get_contents('github_token.txt')) : '';
