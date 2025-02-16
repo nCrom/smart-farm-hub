@@ -1,4 +1,3 @@
-
 <?php
 // 파일 시스템 변경 감지 및 자동 Git 푸시 스크립트
 
@@ -135,12 +134,8 @@ function gitCommitAndPush() {
             $commit_output = shell_exec("cd $repo_path && git commit -m \"$commit_message\" 2>&1");
             writeLog("Git Commit 결과: " . trim($commit_output));
             
-            // 푸시 전 원격 저장소 상태 확인
-            $remote_status = shell_exec("cd $repo_path && git remote -v 2>&1");
-            writeLog("원격 저장소 상태: " . trim($remote_status));
-            
-            // 푸시
-            $push_output = shell_exec("cd $repo_path && git push origin $branch 2>&1");
+            // 강제 푸시 수행
+            $push_output = shell_exec("cd $repo_path && git push -f origin $branch 2>&1");
             writeLog("Git Push 결과: " . trim($push_output));
         } else {
             writeLog("커밋할 변경사항 없음");
