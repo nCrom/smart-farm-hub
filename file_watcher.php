@@ -56,6 +56,13 @@ function checkGitStatus() {
         return false;
     }
     
+    // index.lock 파일이 있다면 제거
+    $lock_file = "$repo_path/.git/index.lock";
+    if (file_exists($lock_file)) {
+        @unlink($lock_file);
+        writeLog("Git index.lock 파일 제거됨");
+    }
+    
     // GitHub 토큰 확인
     $github_token = getenv('GITHUB_TOKEN');
     if (!$github_token) {
@@ -67,8 +74,15 @@ function checkGitStatus() {
     // 먼저 로컬 브랜치를 원격과 강제로 동기화
     $remote_url = "https://{$github_token}@github.com/nCrom/smart-farm-hub.git";
     shell_exec("cd $repo_path && git remote set-url origin {$remote_url}");
+    
+    // 강제로 동기화 전에 모든 로컬 변경사항 초기화
+    shell_exec("cd $repo_path && git reset --hard HEAD && git clean -f -d");
     shell_exec("cd $repo_path && git fetch origin && git reset --hard origin/main");
     writeLog("로컬 브랜치를 원격과 동기화함");
+    
+    // 푸시되지 않은 커밋들 강제로 푸시
+    $push_output = shell_exec("cd $repo_path && git push -f origin main 2>&1");
+    writeLog("Git Push 결과: " . trim($push_output));
     
     $output = shell_exec("cd $repo_path && git status --porcelain");
     writeLog("Git status 결과: " . ($output ? $output : "변경사항 없음"));
