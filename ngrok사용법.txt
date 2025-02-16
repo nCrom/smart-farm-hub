@@ -1,3 +1,4 @@
+
 ** 간단사용법
 ngrok.exe를 실행한 후 아래 붙여넣기 하면 github 양방향 동기화가 됨.
 ngrok http 80
