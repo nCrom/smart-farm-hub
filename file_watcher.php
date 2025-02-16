@@ -6,7 +6,7 @@
 $log_file = 'git_sync.log';
 
 // 환경 설정
-$repo_path = 'D:/nCrom_server/xampp8.2/htdocs';
+$repo_path = 'D:/nCrom_server/xampp8.2/htdocs';  // htdocs 폴더가 맞는지 확인
 $branch = 'main';
 $commit_message = '자동 커밋: 파일 시스템 변경 감지';
 
@@ -96,6 +96,15 @@ while (true) {
     } catch (Exception $e) {
         writeLog("에러 발생: " . $e->getMessage());
     }
+    
+    // 로그 파일 확인
+    if (file_exists($log_file)) {
+        $log_content = file_get_contents($log_file);
+        if (strlen($log_content) > 1000000) { // 1MB 이상이면
+            file_put_contents($log_file, ''); // 로그 파일 초기화
+        }
+    }
+    
     // 5초 대기 후 다시 체크
     sleep(5);
 }
