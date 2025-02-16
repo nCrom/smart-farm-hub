@@ -10,7 +10,7 @@ function writeLog($message) {
 }
 
 // GitHub API 설정
-$github_token = ''; // GitHub 개인 액세스 토큰
+$github_token = '여기에_깃허브_토큰을_입력하세요'; // GitHub 개인 액세스 토큰 설정
 $owner = 'nCrom';
 $repo = 'smart-farm-hub';
 
