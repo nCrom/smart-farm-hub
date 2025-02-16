@@ -17,9 +17,19 @@ function writeLog($message) {
     file_put_contents($log_file, "[$timestamp] $message\n", FILE_APPEND);
 }
 
+// Git 작업이 실행 중인지 확인
+function isGitBusy() {
+    global $repo_path;
+    return file_exists("$repo_path/.git/index.lock") || file_exists("$repo_path/.git/HEAD.lock");
+}
+
 // Git 상태 확인
 function checkGitStatus() {
     global $repo_path;
+    if (isGitBusy()) {
+        writeLog("다른 Git 작업이 실행 중입니다. 대기 중...");
+        return false;
+    }
     $output = shell_exec("cd $repo_path && git status --porcelain");
     writeLog("Git 상태 확인: " . ($output ? "변경사항 있음" : "변경사항 없음"));
     return !empty($output);
@@ -28,6 +38,10 @@ function checkGitStatus() {
 // Git 풀 수행
 function gitPull() {
     global $repo_path;
+    if (isGitBusy()) {
+        writeLog("Git Pull 실패: 다른 Git 작업이 실행 중입니다");
+        return false;
+    }
     writeLog("Git Pull 시작");
     $output = shell_exec("cd $repo_path && git pull origin main 2>&1");
     writeLog("Git Pull 결과: $output");
@@ -37,6 +51,11 @@ function gitPull() {
 // Git 커밋 및 푸시
 function gitCommitAndPush() {
     global $repo_path, $branch, $commit_message;
+    
+    if (isGitBusy()) {
+        writeLog("Git 작업 실패: 다른 Git 작업이 실행 중입니다");
+        return false;
+    }
     
     // 현재 브랜치 확인
     $current_branch = trim(shell_exec("cd $repo_path && git rev-parse --abbrev-ref HEAD"));
@@ -59,17 +78,20 @@ function gitCommitAndPush() {
     $push_output = shell_exec("cd $repo_path && git push origin $branch 2>&1");
     writeLog("Git Push 결과: $push_output");
     
-    return $commit_output . "\n" . $push_output;
+    return true;
 }
 
 // 메인 감시 루프
 writeLog("파일 감시 시작");
 while (true) {
     try {
-        if (checkGitStatus()) {
+        if (checkGitStatus() && !isGitBusy()) {
             writeLog("변경사항 감지됨");
-            $result = gitCommitAndPush();
-            writeLog("동기화 완료: $result");
+            if (gitCommitAndPush()) {
+                writeLog("동기화 완료");
+            } else {
+                writeLog("동기화 실패: Git 작업이 실행 중입니다");
+            }
         }
     } catch (Exception $e) {
         writeLog("에러 발생: " . $e->getMessage());
