@@ -1,5 +1,8 @@
 
 <?php
+// 출력 인코딩 설정
+shell_exec('chcp 65001');
+
 // 파일 시스템 변경 감지 및 자동 Git 푸시 스크립트
 
 // 로그 파일 설정
@@ -73,18 +76,24 @@ function checkGitStatus() {
     
     // 먼저 로컬 브랜치를 원격과 강제로 동기화
     $remote_url = "https://{$github_token}@github.com/nCrom/smart-farm-hub.git";
-    shell_exec("cd $repo_path && git remote set-url origin {$remote_url}");
+    shell_exec("cd $repo_path && git remote set-url origin {$remote_url} 2>&1");
     
     // 강제로 동기화 전에 모든 로컬 변경사항 초기화
-    shell_exec("cd $repo_path && git reset --hard HEAD && git clean -f -d");
-    shell_exec("cd $repo_path && git fetch origin && git reset --hard origin/main");
+    shell_exec("cd $repo_path && git reset --hard HEAD && git clean -f -d 2>&1");
+    shell_exec("cd $repo_path && git fetch origin && git reset --hard origin/main 2>&1");
     writeLog("로컬 브랜치를 원격과 동기화함");
     
     // 푸시되지 않은 커밋들 강제로 푸시
     $push_output = shell_exec("cd $repo_path && git push -f origin main 2>&1");
-    writeLog("Git Push 결과: " . trim($push_output));
+    writeLog("Git Push 결과: " . preg_replace('/Active code page: \d+\n?/', '', trim($push_output)));
     
-    $output = shell_exec("cd $repo_path && git status --porcelain");
+    // 상태 확인 시 2>&1을 추가하여 stderr도 캡처
+    $output = shell_exec("cd $repo_path && git status --porcelain 2>&1");
+    
+    // 모든 "Active code page" 메시지 제거
+    $output = preg_replace('/Active code page: \d+\n?/', '', $output);
+    $output = trim($output);
+    
     writeLog("Git status 결과: " . ($output ? $output : "변경사항 없음"));
     
     if (empty($output)) {
@@ -94,8 +103,9 @@ function checkGitStatus() {
     
     $excluded_files = ['git_sync.log', 'webhook.log', '.git'];
     $changes = array_filter(
-        explode("\n", trim($output)),
+        explode("\n", $output),
         function($line) use ($excluded_files) {
+            $line = trim($line);
             if (empty($line)) return false;
             foreach ($excluded_files as $excluded) {
                 if (strpos($line, $excluded) !== false) {
