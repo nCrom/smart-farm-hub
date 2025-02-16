@@ -1,70 +1,133 @@
 
 <?php
-// 로그 기록 함수
-function writeLog($message) {
-    $timestamp = date('Y-m-d H:i:s');
-    $log_entry = "[$timestamp] $message\n";
-    file_put_contents('git_watcher.log', $log_entry, FILE_APPEND);
-    echo $log_entry;
-}
+/**
+ * Git 자동 동기화 시스템
+ * 로컬 변경사항을 자동으로 감지하여 GitHub 저장소와 동기화합니다.
+ */
 
-// 잠금 파일 확인
-$lock_file = 'git_watcher.lock';
-if (file_exists($lock_file)) {
-    $pid = file_get_contents($lock_file);
-    if (file_exists("/proc/$pid")) {
-        writeLog("다른 인스턴스가 이미 실행 중입니다");
-        die();
-    }
-}
-file_put_contents($lock_file, getmypid());
+class GitWatcher {
+    private $repoPath;
+    private $githubToken;
+    private $lockFile;
+    private $logFile;
+    private $lastHash;
 
-// 종료 시 잠금 파일 삭제
-register_shutdown_function(function() use ($lock_file) {
-    if (file_exists($lock_file)) {
-        unlink($lock_file);
-    }
-});
-
-// GitHub 토큰 확인
-$github_token = getenv('GITHUB_TOKEN');
-if (!$github_token) {
-    writeLog("GitHub 토큰이 설정되지 않았습니다");
-    die();
-}
-
-// 저장소 경로 설정
-$repo_path = __DIR__;
-$last_hash = null;
-
-writeLog("파일 감시 시작");
-writeLog("저장소 경로: $repo_path");
-writeLog("GitHub 토큰 설정 상태: " . ($github_token ? "설정됨" : "설정되지 않음"));
-
-// 메인 루프
-while (true) {
-    // 현재 커밋 해시 확인
-    $current_hash = trim(shell_exec("cd $repo_path && git rev-parse HEAD"));
-    
-    // 초기 실행이거나 변경사항이 있는 경우
-    if ($last_hash === null) {
-        $last_hash = $current_hash;
-    } elseif ($current_hash !== $last_hash) {
-        writeLog("변경사항 감지됨 - 커밋 및 푸시 시도");
+    public function __construct() {
+        $this->repoPath = __DIR__;
+        $this->lockFile = 'git_watcher.lock';
+        $this->logFile = 'git_watcher.log';
+        $this->lastHash = null;
         
-        // 변경사항 커밋 및 푸시
-        shell_exec("cd $repo_path && git add .");
-        $timestamp = date('Y-m-d H:i:s');
-        shell_exec("cd $repo_path && git commit -m \"자동 커밋: $timestamp\"");
-        $push_result = shell_exec("cd $repo_path && git push origin main 2>&1");
-        
-        if (strpos($push_result, 'error') === false) {
-            writeLog("동기화 완료");
-            $last_hash = $current_hash;
-        } else {
-            writeLog("푸시 오류: $push_result");
+        // GitHub 토큰 확인
+        $this->githubToken = getenv('GITHUB_TOKEN');
+        if (!$this->githubToken) {
+            $this->writeLog("오류: GitHub 토큰이 설정되지 않았습니다. 시스템 환경변수 GITHUB_TOKEN을 설정해주세요.");
+            die();
         }
     }
-    
-    sleep(2);
+
+    /**
+     * 로그 기록
+     */
+    private function writeLog($message) {
+        $timestamp = date('Y-m-d H:i:s');
+        $logEntry = "[$timestamp] $message\n";
+        file_put_contents($this->logFile, $logEntry, FILE_APPEND);
+        echo $logEntry;
+    }
+
+    /**
+     * 프로세스 잠금 관리
+     */
+    private function checkLock() {
+        if (file_exists($this->lockFile)) {
+            $pid = file_get_contents($this->lockFile);
+            if (file_exists("/proc/$pid")) {
+                $this->writeLog("경고: 다른 인스턴스가 이미 실행 중입니다 (PID: $pid)");
+                die();
+            }
+        }
+        file_put_contents($this->lockFile, getmypid());
+    }
+
+    /**
+     * Git 명령어 실행
+     */
+    private function execGitCommand($command) {
+        return shell_exec("cd {$this->repoPath} && $command 2>&1");
+    }
+
+    /**
+     * 현재 Git 해시 가져오기
+     */
+    private function getCurrentHash() {
+        return trim($this->execGitCommand('git rev-parse HEAD'));
+    }
+
+    /**
+     * 변경사항 커밋 및 푸시
+     */
+    private function commitAndPush() {
+        $timestamp = date('Y-m-d H:i:s');
+        
+        // 변경사항 스테이징
+        $this->execGitCommand('git add .');
+        
+        // 커밋
+        $this->execGitCommand(sprintf('git commit -m "자동 커밋: %s"', $timestamp));
+        
+        // GitHub로 푸시
+        $pushResult = $this->execGitCommand('git push origin main');
+        
+        if (strpos($pushResult, 'error') === false) {
+            $this->writeLog("성공: 변경사항이 GitHub에 동기화되었습니다.");
+            return true;
+        } else {
+            $this->writeLog("오류: GitHub 푸시 실패 - $pushResult");
+            return false;
+        }
+    }
+
+    /**
+     * 메인 감시 루프
+     */
+    public function watch() {
+        $this->checkLock();
+        
+        // 종료 시 잠금 파일 삭제
+        register_shutdown_function(function() {
+            if (file_exists($this->lockFile)) {
+                unlink($this->lockFile);
+            }
+        });
+
+        $this->writeLog("정보: Git 파일 감시를 시작합니다");
+        $this->writeLog("정보: 저장소 경로 - {$this->repoPath}");
+        $this->writeLog("정보: GitHub 토큰 설정됨");
+
+        while (true) {
+            $currentHash = $this->getCurrentHash();
+            
+            if ($this->lastHash === null) {
+                $this->lastHash = $currentHash;
+            } elseif ($currentHash !== $this->lastHash) {
+                $this->writeLog("정보: 변경사항이 감지되었습니다");
+                
+                if ($this->commitAndPush()) {
+                    $this->lastHash = $currentHash;
+                }
+            }
+            
+            sleep(2);
+        }
+    }
+}
+
+// 실행
+try {
+    $watcher = new GitWatcher();
+    $watcher->watch();
+} catch (Exception $e) {
+    echo "치명적 오류: " . $e->getMessage() . "\n";
+    exit(1);
 }
