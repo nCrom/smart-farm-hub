@@ -17,13 +17,29 @@ function writeLog($message) {
     file_put_contents($log_file, "[$timestamp] $message\n", FILE_APPEND);
 }
 
-// Lock 파일 관리 함수들
+// Lock 파일 강제 제거
+function forceClearLocks() {
+    global $repo_path;
+    $lockFiles = [
+        "$repo_path/.git/index.lock",
+        "$repo_path/.git/HEAD.lock",
+        'git.lock'
+    ];
+    
+    foreach ($lockFiles as $lockFile) {
+        if (file_exists($lockFile)) {
+            unlink($lockFile);
+            writeLog("Lock 파일 제거: $lockFile");
+        }
+    }
+}
+
+// Lock 파일 관리
 function createLock() {
     $lock_file = 'git.lock';
     if (file_exists($lock_file)) {
         $lock_time = filemtime($lock_file);
-        // 5분 이상 된 lock 파일은 제거
-        if (time() - $lock_time > 300) {
+        if (time() - $lock_time > 60) { // 1분 후 자동 해제
             unlink($lock_file);
         } else {
             return false;
@@ -37,38 +53,38 @@ function releaseLock() {
     $lock_file = 'git.lock';
     if (file_exists($lock_file)) {
         unlink($lock_file);
+        writeLog("Lock 파일 해제됨");
     }
 }
 
 // Git 작업이 실행 중인지 확인
 function isGitBusy() {
     global $repo_path;
-    return file_exists("$repo_path/.git/index.lock") || 
-           file_exists("$repo_path/.git/HEAD.lock") || 
-           !createLock();
+    
+    // 오래된 lock 파일 정리
+    if (rand(1, 10) === 1) { // 10% 확률로 실행
+        forceClearLocks();
+    }
+    
+    return !createLock();
 }
 
 // Git 상태 확인
 function checkGitStatus() {
     global $repo_path;
+    
     if (isGitBusy()) {
         writeLog("다른 Git 작업이 실행 중입니다. 대기 중...");
         return false;
     }
     
-    $excluded_files = array(
-        'git_sync.log',
-        'webhook.log',
-        'aaaa.txt',
-        'aaaa - 복사본.txt'
-    );
-    
     $output = shell_exec("cd $repo_path && git status --porcelain");
     if (empty($output)) {
+        releaseLock();
         return false;
     }
     
-    // 제외할 파일들을 필터링
+    $excluded_files = ['git_sync.log', 'webhook.log', 'git.lock'];
     $changes = array_filter(
         explode("\n", trim($output)),
         function($line) use ($excluded_files) {
@@ -81,22 +97,12 @@ function checkGitStatus() {
         }
     );
     
-    writeLog("Git 상태 확인: " . (!empty($changes) ? "변경사항 있음" : "변경사항 없음"));
-    return !empty($changes);
-}
-
-// Git 풀 수행
-function gitPull() {
-    global $repo_path;
-    if (isGitBusy()) {
-        writeLog("Git Pull 실패: 다른 Git 작업이 실행 중입니다");
+    if (empty($changes)) {
+        releaseLock();
         return false;
     }
     
-    writeLog("Git Pull 시작");
-    $pull_output = shell_exec("cd $repo_path && git pull origin main 2>&1");
-    writeLog("Git Pull 결과: $pull_output");
-    
+    writeLog("변경사항 감지됨: " . count($changes) . "개 파일");
     return true;
 }
 
@@ -104,43 +110,21 @@ function gitPull() {
 function gitCommitAndPush() {
     global $repo_path, $branch, $commit_message;
     
-    if (isGitBusy()) {
-        writeLog("Git 작업 실패: 다른 Git 작업이 실행 중입니다");
-        return false;
-    }
-    
     try {
-        // 현재 브랜치 확인
-        $current_branch = trim(shell_exec("cd $repo_path && git rev-parse --abbrev-ref HEAD"));
-        writeLog("현재 브랜치: $current_branch");
-        
-        if ($current_branch !== $branch) {
-            writeLog("브랜치 전환: $branch");
-            shell_exec("cd $repo_path && git checkout $branch");
-        }
-        
         // 변경사항 스테이징
         $add_output = shell_exec("cd $repo_path && git add -A 2>&1");
-        writeLog("Git Add 결과: $add_output");
-        
-        // 커밋 전에 변경사항이 있는지 다시 확인
-        if (!checkGitStatus()) {
-            writeLog("커밋할 변경사항이 없습니다");
-            releaseLock();
-            return true;
-        }
+        writeLog("Git Add 결과: " . trim($add_output));
         
         // 커밋
         $commit_output = shell_exec("cd $repo_path && git commit -m \"$commit_message\" 2>&1");
-        writeLog("Git Commit 결과: $commit_output");
+        writeLog("Git Commit 결과: " . trim($commit_output));
         
         // 푸시
         $push_output = shell_exec("cd $repo_path && git push origin $branch 2>&1");
-        writeLog("Git Push 결과: $push_output");
+        writeLog("Git Push 결과: " . trim($push_output));
         
         releaseLock();
         return true;
-        
     } catch (Exception $e) {
         writeLog("에러 발생: " . $e->getMessage());
         releaseLock();
@@ -150,26 +134,28 @@ function gitCommitAndPush() {
 
 // 메인 감시 루프
 writeLog("파일 감시 시작");
+forceClearLocks(); // 시작 시 lock 파일 정리
+
 while (true) {
     try {
-        if (checkGitStatus() && !isGitBusy()) {
-            writeLog("변경사항 감지됨");
+        if (checkGitStatus()) {
             if (gitCommitAndPush()) {
                 writeLog("동기화 완료");
             } else {
-                writeLog("동기화 실패: Git 작업이 실행 중입니다");
+                writeLog("동기화 실패");
             }
         }
     } catch (Exception $e) {
         writeLog("에러 발생: " . $e->getMessage());
+        releaseLock();
     }
     
-    // 로그 파일 크기 관리
-    if (file_exists($log_file) && filesize($log_file) > 1000000) { // 1MB 이상이면
-        file_put_contents($log_file, ''); // 로그 파일 초기화
+    // 로그 파일 크기 관리 (1MB 초과시 초기화)
+    if (file_exists($log_file) && filesize($log_file) > 1000000) {
+        file_put_contents($log_file, '');
+        writeLog("로그 파일 초기화됨");
     }
     
-    // 5초 대기 후 다시 체크
     sleep(5);
 }
 ?>
