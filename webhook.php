@@ -9,13 +9,45 @@ function writeLog($message) {
     file_put_contents($log_file, "[$timestamp] $message\n", FILE_APPEND);
 }
 
-// GitHub 토큰 설정
-$token = 'your_github_token_here'; // 여기에 GitHub 토큰을 입력하세요
-file_put_contents('github_token.txt', $token);
-writeLog("GitHub 토큰이 설정되었습니다.");
+// 암호화 키 설정 (실제 운영 환경에서는 이 키를 안전한 곳에 보관해야 합니다)
+define('ENCRYPTION_KEY', 'your-secure-encryption-key-here');
+
+// 암호화 함수
+function encrypt($data) {
+    $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
+    $encrypted = openssl_encrypt($data, 'aes-256-cbc', ENCRYPTION_KEY, 0, $iv);
+    return base64_encode($iv . $encrypted);
+}
+
+// 복호화 함수
+function decrypt($data) {
+    $data = base64_decode($data);
+    $iv_length = openssl_cipher_iv_length('aes-256-cbc');
+    $iv = substr($data, 0, $iv_length);
+    $encrypted = substr($data, $iv_length);
+    return openssl_decrypt($encrypted, 'aes-256-cbc', ENCRYPTION_KEY, 0, $iv);
+}
+
+// GitHub 토큰 설정 및 암호화
+$token_file = 'github_token.enc';
+if (!file_exists($token_file)) {
+    $token = 'your_github_token_here'; // 여기에 GitHub 토큰을 입력하세요
+    $encrypted_token = encrypt($token);
+    // 파일 권한을 600으로 설정 (소유자만 읽기/쓰기 가능)
+    file_put_contents($token_file, $encrypted_token);
+    chmod($token_file, 0600);
+    writeLog("암호화된 GitHub 토큰 파일이 생성되었습니다.");
+}
 
 // GitHub API 설정
-$github_token = file_exists('github_token.txt') ? trim(file_get_contents('github_token.txt')) : '';
+$encrypted_token = file_exists($token_file) ? file_get_contents($token_file) : '';
+$github_token = $encrypted_token ? decrypt($encrypted_token) : '';
+
+if (empty($github_token)) {
+    writeLog("오류: GitHub 토큰이 설정되지 않았습니다.");
+    die("GitHub 토큰을 설정해주세요.");
+}
+
 $owner = 'nCrom';
 $repo = 'smart-farm-hub';
 
