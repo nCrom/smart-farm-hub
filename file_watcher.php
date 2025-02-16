@@ -1,9 +1,9 @@
 
 <?php
-require_once __DIR__ . '/src/GitWatcher/Config.php';
-require_once __DIR__ . '/src/GitWatcher/Logger.php';
-require_once __DIR__ . '/src/GitWatcher/LockManager.php';
-require_once __DIR__ . '/src/GitWatcher/GitManager.php';
+require_once 'src/GitWatcher/Config.php';
+require_once 'src/GitWatcher/Logger.php';
+require_once 'src/GitWatcher/LockManager.php';
+require_once 'src/GitWatcher/GitManager.php';
 
 use GitWatcher\Config;
 use GitWatcher\Logger;
