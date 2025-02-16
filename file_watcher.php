@@ -57,6 +57,9 @@ function gitCommitAndPush() {
         return false;
     }
     
+    // 먼저 pull 수행
+    gitPull();
+    
     // 현재 브랜치 확인
     $current_branch = trim(shell_exec("cd $repo_path && git rev-parse --abbrev-ref HEAD"));
     writeLog("현재 브랜치: $current_branch");
@@ -70,9 +73,19 @@ function gitCommitAndPush() {
     $add_output = shell_exec("cd $repo_path && git add . 2>&1");
     writeLog("Git Add 결과: $add_output");
     
+    // 커밋 전에 변경사항이 있는지 다시 확인
+    $status_output = shell_exec("cd $repo_path && git status --porcelain");
+    if (empty($status_output)) {
+        writeLog("커밋할 변경사항이 없습니다");
+        return true;
+    }
+    
     // 커밋
     $commit_output = shell_exec("cd $repo_path && git commit -m \"$commit_message\" 2>&1");
     writeLog("Git Commit 결과: $commit_output");
+    
+    // 푸시 전에 다시 한번 pull
+    gitPull();
     
     // 푸시
     $push_output = shell_exec("cd $repo_path && git push origin $branch 2>&1");
