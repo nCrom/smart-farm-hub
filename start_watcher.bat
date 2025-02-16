@@ -1,5 +1,6 @@
 
 @echo off
+chcp 65001
 echo Git 설정을 시작합니다...
 "D:\nCrom_server\xampp8.2\php\php.exe" setup.php
 if errorlevel 1 (
