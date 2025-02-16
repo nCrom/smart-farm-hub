@@ -20,8 +20,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     die('Method Not Allowed');
 }
 
-// GitHub 시크릿 설정
-$secret = "smart-farm-hub-secret";
+// GitHub 시크릿 설정 - 환경 변수에서 읽기
+$secret = getenv('GITHUB_WEBHOOK_SECRET');
+if (!$secret) {
+    writeLog("GitHub Webhook Secret이 설정되지 않았습니다");
+    http_response_code(500);
+    die('Configuration Error');
+}
 
 // GitHub에서 온 요청인지 검증
 $headers = getallheaders();
