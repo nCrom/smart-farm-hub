@@ -15,8 +15,8 @@ writeLog("현재 디렉토리: " . $current_dir);
 writeLog("PHP 실행 사용자: " . get_current_user());
 writeLog("디렉토리 쓰기 권한: " . (is_writable($current_dir) ? "있음" : "없음"));
 
-// 암호화 키 설정 (실제 운영 환경에서는 이 키를 안전한 곳에 보관해야 합니다)
-define('ENCRYPTION_KEY', 'your-secure-encryption-key-here');
+// 암호화 키 설정
+define('ENCRYPTION_KEY', 'smartfarm-hub-secure-key-2024'); // 보안 강화를 위해 키 변경
 
 // 암호화 함수
 function encrypt($data) {
@@ -35,7 +35,13 @@ function decrypt($data) {
 }
 
 // GitHub 토큰 설정 및 암호화
-$token_file = $current_dir . '/github_token.enc';
+$config_dir = $current_dir . '/config';
+if (!file_exists($config_dir)) {
+    mkdir($config_dir, 0755, true);
+    writeLog("설정 디렉토리 생성됨: " . $config_dir);
+}
+
+$token_file = $config_dir . '/github_token.enc';
 writeLog("토큰 파일 경로: " . $token_file);
 writeLog("토큰 파일 존재 여부: " . (file_exists($token_file) ? "존재함" : "존재하지 않음"));
 
@@ -232,6 +238,9 @@ if (function_exists('fastcgi_finish_request')) {
 }
 
 writeLog("Webhook 수신됨");
+
+// git pull 실행 전 현재 디렉토리 기록
+writeLog("Git Pull 실행 디렉토리: " . getcwd());
 
 // git pull 실행
 $output = shell_exec('git -C D:/nCrom_server/xampp8.2/htdocs pull 2>&1');
