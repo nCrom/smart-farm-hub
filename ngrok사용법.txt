@@ -32,3 +32,8 @@ Secret: smart-farm-hub-secret (webhook.php 파일에 설정한 값)
 SSL verification: Disable (체크 해제)
 Just the push event 선택
 
+
+** 내 로컬에 있어야 하는 파일
+webhook.php
+$secret = "아무거나 16자이상"; // GitHub에서 설정할 시크릿키
+
