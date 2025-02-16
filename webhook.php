@@ -9,244 +9,61 @@ function writeLog($message) {
     file_put_contents($log_file, "[$timestamp] $message\n", FILE_APPEND);
 }
 
-// 디버깅을 위한 파일 권한 및 디렉토리 체크
-$current_dir = dirname(__FILE__);
-writeLog("현재 디렉토리: " . $current_dir);
-writeLog("PHP 실행 사용자: " . get_current_user());
-writeLog("디렉토리 쓰기 권한: " . (is_writable($current_dir) ? "있음" : "없음"));
+// webhook 요청 처리
+writeLog("Webhook 요청 수신");
+writeLog("요청 메소드: " . $_SERVER['REQUEST_METHOD']);
 
-// 암호화 키 설정
-define('ENCRYPTION_KEY', 'smartfarm-hub-secure-key-2024'); // 보안 강화를 위해 키 변경
-
-// 암호화 함수
-function encrypt($data) {
-    $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
-    $encrypted = openssl_encrypt($data, 'aes-256-cbc', ENCRYPTION_KEY, 0, $iv);
-    return base64_encode($iv . $encrypted);
+// POST 요청인지 확인
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    writeLog("잘못된 요청 메소드: " . $_SERVER['REQUEST_METHOD']);
+    http_response_code(405);
+    die('Method Not Allowed');
 }
 
-// 복호화 함수
-function decrypt($data) {
-    $data = base64_decode($data);
-    $iv_length = openssl_cipher_iv_length('aes-256-cbc');
-    $iv = substr($data, 0, $iv_length);
-    $encrypted = substr($data, $iv_length);
-    return openssl_decrypt($encrypted, 'aes-256-cbc', ENCRYPTION_KEY, 0, $iv);
+// GitHub 시크릿 설정
+$secret = "smart-farm-hub-secret";
+
+// GitHub에서 온 요청인지 검증
+$headers = getallheaders();
+$signature = $headers['X-Hub-Signature-256'] ?? '';
+
+if (empty($signature)) {
+    writeLog("서명이 없음");
+    http_response_code(401);
+    die('No Signature');
 }
 
-// GitHub 토큰 설정 및 암호화
-$config_dir = $current_dir . '/config';
-if (!file_exists($config_dir)) {
-    mkdir($config_dir, 0755, true);
-    writeLog("설정 디렉토리 생성됨: " . $config_dir);
-}
+// 페이로드 가져오기
+$payload = file_get_contents('php://input');
+writeLog("수신된 페이로드 크기: " . strlen($payload) . " bytes");
 
-$token_file = $config_dir . '/github_token.enc';
-writeLog("토큰 파일 경로: " . $token_file);
-writeLog("토큰 파일 존재 여부: " . (file_exists($token_file) ? "존재함" : "존재하지 않음"));
-
-if (!file_exists($token_file)) {
-    try {
-        $token = 'your_github_token_here'; // 여기에 GitHub 토큰을 입력하세요
-        $encrypted_token = encrypt($token);
-        
-        // 파일 생성 시도
-        $result = file_put_contents($token_file, $encrypted_token);
-        if ($result === false) {
-            writeLog("오류: 파일 생성 실패");
-            writeLog("PHP 오류: " . error_get_last()['message']);
-        } else {
-            chmod($token_file, 0600);
-            writeLog("암호화된 GitHub 토큰 파일이 생성되었습니다.");
-        }
-    } catch (Exception $e) {
-        writeLog("예외 발생: " . $e->getMessage());
-    }
-}
-
-// GitHub API 설정
-$encrypted_token = file_exists($token_file) ? file_get_contents($token_file) : '';
-$github_token = $encrypted_token ? decrypt($encrypted_token) : '';
-
-if (empty($github_token)) {
-    writeLog("오류: GitHub 토큰이 설정되지 않았습니다.");
-    die("GitHub 토큰을 설정해주세요.");
-}
-
-$owner = 'nCrom';
-$repo = 'smart-farm-hub';
-
-// ngrok API를 통해 현재 터널 URL 가져오기
-function getNgrokUrl() {
-    $ngrok_api = "http://127.0.0.1:4040/api/tunnels";
-    writeLog("ngrok API 요청: $ngrok_api");
-    
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $ngrok_api);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    $response = curl_exec($ch);
-    
-    if (curl_errno($ch)) {
-        writeLog("ngrok API 오류: " . curl_error($ch));
-        curl_close($ch);
-        return null;
-    }
-    
-    curl_close($ch);
-    writeLog("ngrok API 응답: " . $response);
-
-    if ($response) {
-        $tunnels = json_decode($response, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            writeLog("JSON 파싱 오류: " . json_last_error_msg());
-            return null;
-        }
-        
-        foreach ($tunnels['tunnels'] as $tunnel) {
-            if ($tunnel['proto'] === 'https') {
-                writeLog("ngrok URL 찾음: " . $tunnel['public_url']);
-                return $tunnel['public_url'];
-            }
-        }
-    }
-    
-    writeLog("ngrok URL을 찾을 수 없음");
-    return null;
-}
-
-// GitHub Webhook URL 업데이트
-function updateGithubWebhook($ngrok_url) {
-    global $github_token, $owner, $repo;
-    
-    if (empty($github_token)) {
-        writeLog("GitHub 토큰이 설정되지 않았습니다");
-        return false;
-    }
-    
-    // webhook ID를 저장할 파일
-    $webhook_id_file = 'webhook_id.txt';
-    
-    // GitHub API 엔드포인트
-    $api_url = "https://api.github.com/repos/$owner/$repo/hooks";
-    
-    // webhook 설정
-    $webhook_data = array(
-        'config' => array(
-            'url' => $ngrok_url . '/webhook.php',
-            'content_type' => 'application/json',
-            'secret' => 'smart-farm-hub-secret',
-            'insecure_ssl' => '0'
-        ),
-        'events' => ['push'],
-        'active' => true
-    );
-
-    writeLog("webhook 데이터: " . json_encode($webhook_data));
-
-    // 기존 webhook ID 확인
-    $webhook_id = file_exists($webhook_id_file) ? file_get_contents($webhook_id_file) : null;
-
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-        'Accept: application/vnd.github.v3+json',
-        'Authorization: token ' . $github_token,
-        'User-Agent: PHP Script'
-    ));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-    if ($webhook_id) {
-        // 기존 webhook 업데이트
-        writeLog("기존 webhook 업데이트 (ID: $webhook_id)");
-        curl_setopt($ch, CURLOPT_URL, "$api_url/$webhook_id");
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PATCH");
-    } else {
-        // 새 webhook 생성
-        writeLog("새 webhook 생성");
-        curl_setopt($ch, CURLOPT_URL, $api_url);
-        curl_setopt($ch, CURLOPT_POST, true);
-    }
-
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($webhook_data));
-    $response = curl_exec($ch);
-    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    
-    if (curl_errno($ch)) {
-        writeLog("CURL 오류: " . curl_error($ch));
-        curl_close($ch);
-        return false;
-    }
-    
-    curl_close($ch);
-    writeLog("GitHub API 응답 코드: $http_code");
-    writeLog("GitHub API 응답: $response");
-
-    if ($http_code >= 200 && $http_code < 300) {
-        $result = json_decode($response, true);
-        if (!$webhook_id && isset($result['id'])) {
-            // 새로 생성된 webhook ID 저장
-            file_put_contents($webhook_id_file, $result['id']);
-            writeLog("새 webhook ID 저장됨: " . $result['id']);
-        }
-        writeLog("Webhook URL 업데이트 성공: " . $ngrok_url);
-        return true;
-    }
-
-    writeLog("Webhook URL 업데이트 실패: HTTP $http_code");
-    return false;
-}
-
-// 스크립트 시작 시 ngrok URL 확인 및 업데이트
-$ngrok_url = getNgrokUrl();
-if ($ngrok_url) {
-    writeLog("ngrok URL 발견: $ngrok_url");
-    if (updateGithubWebhook($ngrok_url)) {
-        writeLog("GitHub webhook 업데이트 완료");
-    } else {
-        writeLog("GitHub webhook 업데이트 실패");
-    }
-} else {
-    writeLog("ngrok URL을 찾을 수 없음");
+// 시그니처 검증
+$hash = 'sha256=' . hash_hmac('sha256', $payload, $secret);
+if (!hash_equals($signature, $hash)) {
+    writeLog("잘못된 서명");
+    http_response_code(403);
+    die('Invalid Signature');
 }
 
 // 클라이언트와의 연결을 즉시 종료하고 백그라운드에서 처리
 ignore_user_abort(true);
 set_time_limit(0);
-ob_start();
 
-// GitHub에서 온 요청인지 검증
-$github_signature = $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? '';
-$secret = "smart-farm-hub-secret";
-$payload = file_get_contents('php://input');
+// 성공 응답 전송
+http_response_code(200);
+writeLog("검증 성공, 200 응답 전송");
 
-// 시그니처 검증
-$hash = 'sha256=' . hash_hmac('sha256', $payload, $secret);
-if (!hash_equals($github_signature, $hash)) {
-    writeLog("인증 실패");
-    http_response_code(403);
-    exit('인증 실패');
-}
-
-// 즉시 응답 반환
-header('Content-Length: ' . ob_get_length());
-header('Connection: close');
-ob_end_flush();
-flush();
-
-// 백그라운드에서 git pull 실행
-if (function_exists('fastcgi_finish_request')) {
-    fastcgi_finish_request();
-}
-
-writeLog("Webhook 수신됨");
-
-// git pull 실행 전 현재 디렉토리 기록
-writeLog("Git Pull 실행 디렉토리: " . getcwd());
+// Git 작업 수행
+$repo_path = 'D:/nCrom_server/xampp8.2/htdocs';
+writeLog("Git pull 시작: " . $repo_path);
 
 // git pull 실행
-$output = shell_exec('git -C D:/nCrom_server/xampp8.2/htdocs pull 2>&1');
-writeLog("Git Pull 결과: " . $output);
+$output = shell_exec("cd $repo_path && git pull origin main 2>&1");
+writeLog("Git pull 결과: " . $output);
 
-// 캐시 삭제 등 추가 작업
+// 캐시 초기화
 shell_exec('php -r "opcache_reset();" 2>&1');
 writeLog("캐시 초기화 완료");
+
+die('OK');
 ?>
