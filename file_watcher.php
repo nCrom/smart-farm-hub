@@ -1,3 +1,4 @@
+
 <?php
 // 파일 시스템 변경 감지 및 자동 Git 푸시 스크립트
 
@@ -63,6 +64,12 @@ function checkGitStatus() {
         return false;
     }
     
+    // 먼저 로컬 브랜치를 원격과 강제로 동기화
+    $remote_url = "https://{$github_token}@github.com/nCrom/smart-farm-hub.git";
+    shell_exec("cd $repo_path && git remote set-url origin {$remote_url}");
+    shell_exec("cd $repo_path && git fetch origin && git reset --hard origin/main");
+    writeLog("로컬 브랜치를 원격과 동기화함");
+    
     $output = shell_exec("cd $repo_path && git status --porcelain");
     writeLog("Git status 결과: " . ($output ? $output : "변경사항 없음"));
     
@@ -115,10 +122,6 @@ function gitCommitAndPush() {
             @unlink($lock_file);
             writeLog("Git index.lock 파일 제거됨");
         }
-        
-        // 강제로 로컬 브랜치를 원격과 동기화
-        $reset_output = shell_exec("cd $repo_path && git fetch origin && git reset --hard origin/$branch 2>&1");
-        writeLog("Git Reset 결과: " . trim($reset_output));
         
         // 변경사항 스테이징
         $add_output = shell_exec("cd $repo_path && git add -A 2>&1");
