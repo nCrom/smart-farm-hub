@@ -17,30 +17,19 @@ function writeLog($message) {
     file_put_contents($log_file, "[$timestamp] $message\n", FILE_APPEND);
 }
 
-// Lock 파일 강제 제거
-function forceClearLocks() {
-    global $repo_path;
-    $lockFiles = [
-        "$repo_path/.git/index.lock",
-        "$repo_path/.git/HEAD.lock",
-        'git.lock'
-    ];
-    
-    foreach ($lockFiles as $lockFile) {
-        if (file_exists($lockFile)) {
-            unlink($lockFile);
-            writeLog("Lock 파일 제거: $lockFile");
-        }
-    }
+// Lock 파일 경로 설정
+function getLockFilePath() {
+    return sys_get_temp_dir() . '/git_sync.lock';
 }
 
 // Lock 파일 관리
 function createLock() {
-    $lock_file = 'git.lock';
+    $lock_file = getLockFilePath();
     if (file_exists($lock_file)) {
         $lock_time = filemtime($lock_file);
-        if (time() - $lock_time > 60) { // 1분 후 자동 해제
-            unlink($lock_file);
+        // 30초 후 자동 해제 (이전 1분에서 단축)
+        if (time() - $lock_time > 30) {
+            @unlink($lock_file);
         } else {
             return false;
         }
@@ -50,31 +39,17 @@ function createLock() {
 }
 
 function releaseLock() {
-    $lock_file = 'git.lock';
+    $lock_file = getLockFilePath();
     if (file_exists($lock_file)) {
-        unlink($lock_file);
-        writeLog("Lock 파일 해제됨");
+        @unlink($lock_file);
     }
-}
-
-// Git 작업이 실행 중인지 확인
-function isGitBusy() {
-    global $repo_path;
-    
-    // 오래된 lock 파일 정리
-    if (rand(1, 10) === 1) { // 10% 확률로 실행
-        forceClearLocks();
-    }
-    
-    return !createLock();
 }
 
 // Git 상태 확인
 function checkGitStatus() {
     global $repo_path;
     
-    if (isGitBusy()) {
-        writeLog("다른 Git 작업이 실행 중입니다. 대기 중...");
+    if (!createLock()) {
         return false;
     }
     
@@ -84,7 +59,7 @@ function checkGitStatus() {
         return false;
     }
     
-    $excluded_files = ['git_sync.log', 'webhook.log', 'git.lock'];
+    $excluded_files = ['git_sync.log', 'webhook.log'];
     $changes = array_filter(
         explode("\n", trim($output)),
         function($line) use ($excluded_files) {
@@ -134,7 +109,9 @@ function gitCommitAndPush() {
 
 // 메인 감시 루프
 writeLog("파일 감시 시작");
-forceClearLocks(); // 시작 시 lock 파일 정리
+
+// 시작 시 lock 파일 정리
+releaseLock();
 
 while (true) {
     try {
@@ -156,6 +133,6 @@ while (true) {
         writeLog("로그 파일 초기화됨");
     }
     
-    sleep(5);
+    sleep(3); // 체크 주기를 5초에서 3초로 단축
 }
 ?>
