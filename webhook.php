@@ -1,5 +1,10 @@
 
 <?php
+// 클라이언트와의 연결을 즉시 종료하고 백그라운드에서 처리하기 위한 설정
+ignore_user_abort(true);
+set_time_limit(0);
+ob_start();
+
 // GitHub에서 온 요청인지 검증
 $github_signature = $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? '';
 $secret = "smart-farm-hub-secret"; // GitHub에서 설정할 시크릿키
@@ -13,9 +18,17 @@ if (!hash_equals($github_signature, $hash)) {
     exit('인증 실패');
 }
 
-// git pull 실행
-$output = shell_exec('git -C D:/nCrom_server/xampp8.2/htdocs pull 2>&1');
+// 즉시 응답 반환
+header('Content-Length: ' . ob_get_length());
+header('Connection: close');
+ob_end_flush();
+flush();
 
-echo "성공적으로 업데이트됨: " . $output;
+// 백그라운드에서 git pull 실행
+if (function_exists('fastcgi_finish_request')) {
+    fastcgi_finish_request();
+}
+
+// git pull 실행 (이제 백그라운드에서 실행됨)
+shell_exec('git -C D:/nCrom_server/xampp8.2/htdocs pull > /dev/null 2>&1 &');
 ?>
-
