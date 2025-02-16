@@ -117,9 +117,9 @@ function gitCommitAndPush() {
             writeLog("Git index.lock 파일 제거됨");
         }
         
-        // 먼저 pull 수행
-        $pull_output = shell_exec("cd $repo_path && git pull origin $branch 2>&1");
-        writeLog("Git Pull 결과: " . trim($pull_output));
+        // 강제로 로컬 브랜치를 원격과 동기화
+        $reset_output = shell_exec("cd $repo_path && git fetch origin && git reset --hard origin/$branch 2>&1");
+        writeLog("Git Reset 결과: " . trim($reset_output));
         
         // 변경사항 스테이징
         $add_output = shell_exec("cd $repo_path && git add -A 2>&1");
